@@ -22,53 +22,60 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, promoCode, bran
     const mapsUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(5, 5, 5, 0.95)' }}>
-            <div className="max-w-md w-full animate-slide-up">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 animate-fade-in" style={{ backgroundColor: 'rgba(0, 0, 0, 0.92)' }}>
+            {/* Фоновый glow */}
+            <div
+                className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full blur-[150px] opacity-[0.06]"
+                style={{ backgroundColor: brandColor }}
+            />
+
+            <div className="relative max-w-md w-full animate-scale-in">
                 {/* Иконка успеха */}
-                <div className="flex justify-center mb-8">
+                <div className="flex justify-center mb-10">
                     <div className="relative">
                         <div
-                            className="w-24 h-24 rounded-full flex items-center justify-center animate-float"
-                            style={{ backgroundColor: `${brandColor}15` }}
+                            className="w-28 h-28 rounded-full flex items-center justify-center animate-float"
+                            style={{ backgroundColor: `${brandColor}12` }}
                         >
-                            <svg className="w-12 h-12" style={{ color: brandColor }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <svg className="w-14 h-14" style={{ color: brandColor }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
                         <div
-                            className="absolute -inset-4 rounded-full opacity-20 blur-2xl animate-glow-pulse"
+                            className="absolute -inset-6 rounded-full opacity-15 blur-3xl animate-glow-pulse"
                             style={{ backgroundColor: brandColor }}
                         />
                     </div>
                 </div>
 
                 {/* Текст */}
-                <div className="text-center mb-8">
-                    <h2 className="text-2xl font-black text-white mb-3">Вы записаны!</h2>
-                    <p className="text-base text-white/50 leading-relaxed">
-                        Мы свяжемся с вами в ближайшее время. Ждём вас в <span className="text-white font-bold">{clubName}</span>!
+                <div className="text-center mb-10">
+                    <h2 className="text-3xl font-black text-white mb-4">Вы записаны!</h2>
+                    <p className="text-lg text-white/45 leading-relaxed">
+                        Мы свяжемся с вами в ближайшее время.<br />
+                        Ждём вас в <span className="text-white font-bold">{clubName}</span>!
                     </p>
                 </div>
 
                 {/* Промокод */}
                 {promoCode && (
-                    <div className="glass rounded-2xl p-5 mb-4">
-                        <div className="text-xs text-white/40 font-bold uppercase tracking-wider mb-2">Ваш промокод</div>
+                    <div className="glass rounded-[24px] p-6 mb-5">
+                        <div className="text-[11px] text-white/35 font-semibold uppercase tracking-wider mb-3">Ваш промокод</div>
                         <div className="flex items-center gap-3">
                             <div
-                                className="flex-1 px-4 py-3 rounded-xl text-center text-xl font-black tracking-[0.2em] text-black"
+                                className="flex-1 px-5 py-3.5 rounded-2xl text-center text-xl font-black tracking-[0.15em] text-black"
                                 style={{ backgroundColor: brandColor }}
                             >
                                 {promoCode}
                             </div>
                             <button
                                 onClick={handleCopy}
-                                className="px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white transition-all text-sm font-bold shrink-0"
+                                className="px-5 py-3.5 rounded-2xl glass-light text-white/50 hover:text-white transition-all text-sm font-bold shrink-0"
                             >
-                                {copied ? 'Скопировано!' : 'Копировать'}
+                                {copied ? '✓' : 'Копировать'}
                             </button>
                         </div>
-                        <p className="text-xs text-white/30 mt-3">Назовите промокод администратору при визите</p>
+                        <p className="text-xs text-white/25 mt-3">Назовите промокод администратору при визите</p>
                     </div>
                 )}
 
@@ -77,9 +84,9 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, promoCode, bran
                     href={mapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-white/5 border border-white/8 text-white/70 hover:bg-white/10 hover:text-white transition-all text-sm font-bold mb-4"
+                    className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl glass-light text-white/60 hover:text-white hover:bg-white/8 transition-all text-sm font-bold mb-5"
                 >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -90,7 +97,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, promoCode, bran
                 {onClose && (
                     <button
                         onClick={onClose}
-                        className="w-full py-3 text-sm text-white/30 hover:text-white/60 transition-colors"
+                        className="w-full py-3 text-sm text-white/25 hover:text-white/50 transition-colors"
                     >
                         Вернуться
                     </button>

@@ -9,6 +9,23 @@ interface LandingPageProps {
     slug: string;
 }
 
+/** Хук для определения десктопного экрана */
+const useIsDesktop = (breakpoint = 1024) => {
+    const [isDesktop, setIsDesktop] = useState(
+        typeof window !== 'undefined' ? window.innerWidth >= breakpoint : false
+    );
+
+    useEffect(() => {
+        const mq = window.matchMedia(`(min-width: ${breakpoint}px)`);
+        const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+        mq.addEventListener('change', handler);
+        setIsDesktop(mq.matches);
+        return () => mq.removeEventListener('change', handler);
+    }, [breakpoint]);
+
+    return isDesktop;
+};
+
 const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     const [landing, setLanding] = useState<ClubLanding | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -16,6 +33,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     const [showSuccess, setShowSuccess] = useState(false);
     const [promoCode, setPromoCode] = useState<string>();
     const [error, setError] = useState<string>();
+    const isDesktop = useIsDesktop();
 
     // UTM параметры из URL
     const params = new URLSearchParams(window.location.search);
@@ -31,8 +49,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                 const data = await getLandingData(slug);
                 if (data) {
                     setLanding(data);
-                    // Трекаем просмотр
                     trackView(data.form.id, utm);
+                    // Обновляем title страницы
+                    document.title = `${data.club.name} — ${data.form.offerTitle}`;
                 } else {
                     setError('Страница не найдена');
                 }
@@ -53,7 +72,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
         try {
             const result = await submitLead({
                 form_id: landing.form.id,
-                club_id: '', // будет определён на бэкенде через form_id
+                club_id: '',
                 name: formData.name,
                 phone: formData.phone,
                 telegram: formData.telegram,
@@ -75,30 +94,30 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
         }
     };
 
-    // Лоадер
+    // ── Лоадер ──
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <div className="flex flex-col items-center gap-3">
-                    <div className="w-10 h-10 border-2 border-white/10 border-t-brand rounded-full animate-spin" />
-                    <span className="text-xs text-white/30 font-medium tracking-wider uppercase">Загрузка...</span>
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-10 h-10 border-2 border-white/8 border-t-white/40 rounded-full animate-spin" />
+                    <span className="text-xs text-white/20 font-medium tracking-[0.15em] uppercase">Загрузка</span>
                 </div>
             </div>
         );
     }
 
-    // Ошибка
+    // ── Ошибка ──
     if (error && !landing) {
         return (
             <div className="min-h-screen flex items-center justify-center px-6">
                 <div className="text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-                        <svg className="w-8 h-8 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <div className="w-20 h-20 rounded-[22px] bg-white/3 flex items-center justify-center mx-auto mb-5">
+                        <svg className="w-9 h-9 text-white/15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                         </svg>
                     </div>
-                    <h2 className="text-lg font-bold text-white mb-1">Страница не найдена</h2>
-                    <p className="text-sm text-white/40">Проверьте ссылку и попробуйте ещё раз</p>
+                    <h2 className="text-xl font-black text-white mb-2">Страница не найдена</h2>
+                    <p className="text-sm text-white/35">Проверьте ссылку и попробуйте ещё раз</p>
                 </div>
             </div>
         );
@@ -107,30 +126,107 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     if (!landing) return null;
 
     const brandColor = landing.form.brandColor || '#30D158';
-    // Фильтрация "none" значений из n8n (fallback для пустых строк в Postgres queryReplacement)
     const clean = (v?: string) => v && v !== 'none' ? v : undefined;
 
+    // ══════════════════════════════════════════════
+    // ██  ДЕСКТОПНЫЙ LAYOUT — двухколоночный       ██
+    // ══════════════════════════════════════════════
+    if (isDesktop) {
+        return (
+            <>
+                <div className="desktop-grid">
+                    {/* ── Левая колонка: Hero + обложка ── */}
+                    <div className="desktop-left">
+                        <ClubHeader
+                            clubName={landing.club.name}
+                            clubLogo={landing.club.avatarUrl}
+                            coverUrl={landing.club.coverUrl}
+                            address={landing.club.address}
+                            workingHours={landing.club.workingHours}
+                            brandColor={brandColor}
+                            isDesktopHero
+                        />
+                    </div>
+
+                    {/* ── Правая колонка: Оффер + Форма ── */}
+                    <div className="desktop-right">
+                        <div className="w-full max-w-lg space-y-8">
+                            {/* Фоновые декорации */}
+                            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                                <div
+                                    className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full blur-[150px] opacity-[0.03]"
+                                    style={{ backgroundColor: brandColor }}
+                                />
+                            </div>
+
+                            {/* Оффер */}
+                            <OfferCard
+                                title={landing.form.offerTitle}
+                                description={clean(landing.form.offerDescription) || ''}
+                                terms={clean(landing.form.offerTerms)}
+                                badge={clean(landing.form.offerBadge)}
+                                brandColor={brandColor}
+                                isDesktop
+                            />
+
+                            {/* Форма */}
+                            <LeadForm
+                                brandColor={brandColor}
+                                clubAddress={landing.club.address}
+                                onSubmit={handleSubmit}
+                                isLoading={isSubmitting}
+                                isDesktop
+                            />
+
+                            {/* Ошибка */}
+                            {error && (
+                                <div className="glass rounded-2xl p-4 text-center animate-fade-in">
+                                    <p className="text-sm text-red-400">{error}</p>
+                                </div>
+                            )}
+
+                            {/* Футер */}
+                            <footer className="pt-4 text-center">
+                                <div className="flex items-center justify-center gap-1.5 text-[11px] text-white/10">
+                                    <span>Powered by</span>
+                                    <span className="font-bold text-white/20">Loot Arena</span>
+                                </div>
+                            </footer>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Экран успеха */}
+                {showSuccess && (
+                    <SuccessScreen
+                        clubName={landing.club.name}
+                        promoCode={promoCode}
+                        brandColor={brandColor}
+                        address={landing.club.address}
+                        onClose={() => setShowSuccess(false)}
+                    />
+                )}
+            </>
+        );
+    }
+
+    // ══════════════════════════════════════════════
+    // ██  МОБИЛЬНЫЙ LAYOUT — вертикальный          ██
+    // ══════════════════════════════════════════════
     return (
         <>
             {/* Фоновые декорации */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div
-                    className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full blur-[120px] opacity-[0.04]"
+                    className="absolute top-[-20%] right-[-10%] w-[400px] h-[400px] rounded-full blur-[120px] opacity-[0.04]"
                     style={{ backgroundColor: brandColor }}
                 />
-                <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] rounded-full blur-[100px] opacity-[0.03] bg-neon-purple" />
-                <div
-                    className="absolute inset-0 opacity-[0.02]"
-                    style={{
-                        backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
-                        backgroundSize: '60px 60px',
-                    }}
-                />
+                <div className="absolute bottom-[-10%] left-[-10%] w-[300px] h-[300px] rounded-full blur-[100px] opacity-[0.03] bg-neon-purple" />
             </div>
 
             {/* Основной контент */}
             <div className="relative min-h-screen flex flex-col">
-                <div className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12">
+                <div className="flex-1 flex items-center justify-center px-5 py-10">
                     <div className="w-full max-w-md space-y-6">
                         {/* Шапка клуба */}
                         <ClubHeader
@@ -142,7 +238,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                             brandColor={brandColor}
                         />
 
-                        {/* Карточка оффера */}
+                        {/* Оффер */}
                         <OfferCard
                             title={landing.form.offerTitle}
                             description={clean(landing.form.offerDescription) || ''}
@@ -159,9 +255,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                             isLoading={isSubmitting}
                         />
 
-                        {/* Ошибка отправки */}
+                        {/* Ошибка */}
                         {error && (
-                            <div className="glass rounded-xl p-3 text-center">
+                            <div className="glass rounded-2xl p-3 text-center">
                                 <p className="text-sm text-red-400">{error}</p>
                             </div>
                         )}
@@ -170,9 +266,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
 
                 {/* Футер */}
                 <footer className="py-6 text-center">
-                    <div className="flex items-center justify-center gap-1.5 text-[10px] text-white/15">
+                    <div className="flex items-center justify-center gap-1.5 text-[11px] text-white/10">
                         <span>Powered by</span>
-                        <span className="font-bold text-white/25">Loot Arena</span>
+                        <span className="font-bold text-white/20">Loot Arena</span>
                     </div>
                 </footer>
             </div>
