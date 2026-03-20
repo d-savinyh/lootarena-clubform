@@ -1,0 +1,36 @@
+# Зависимости
+node_modules
+
+# Сборка
+dist
+dist-ssr
+
+# Логи
+logs
+*.log
+npm-debug.log*
+
+# Git
+.git
+
+# Agent / AI конфиги
+.agent
+.agents
+.gemini
+
+# Спецификации
+specs
+
+# Документация
+*.md
+LICENSE
+
+# Редакторы
+.vscode
+.idea
+.DS_Store
+*.suo
+*.sw?
+
+# Локальные переменные
+*.local
