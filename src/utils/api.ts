@@ -8,7 +8,8 @@ export interface ClubLanding {
         name: string;
         address: string;
         workingHours?: string;
-        logoUrl?: string;
+        avatarUrl?: string;
+        coverUrl?: string;
         socialLinks?: {
             vk?: string;
             telegram?: string;

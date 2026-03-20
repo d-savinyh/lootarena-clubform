@@ -135,7 +135,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         {/* Шапка клуба */}
                         <ClubHeader
                             clubName={landing.club.name}
-                            clubLogo={landing.club.logoUrl}
+                            clubLogo={landing.club.avatarUrl}
+                            coverUrl={landing.club.coverUrl}
                             address={landing.club.address}
                             workingHours={landing.club.workingHours}
                             brandColor={brandColor}
