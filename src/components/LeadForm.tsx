@@ -74,9 +74,13 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, clubAddress, onSubmit, 
 
                 {/* Имя */}
                 <div>
+                    <label className="text-[10px] text-white/30 font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                        Имя <span className="text-red-400">*</span>
+                    </label>
                     <input
                         type="text"
                         placeholder="Ваше имя"
+                        required
                         value={name}
                         onChange={e => { setName(e.target.value); if (errors.name) setErrors(prev => ({ ...prev, name: '' })); }}
                         className={`w-full px-4 py-3.5 rounded-xl bg-white/5 border text-white placeholder:text-white/25 text-sm font-medium transition-all focus:outline-none focus:ring-2 ${errors.name ? 'border-red-500/50 focus:ring-red-500/30' : 'border-white/8 focus:ring-white/10 focus:border-white/15'
@@ -87,9 +91,13 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, clubAddress, onSubmit, 
 
                 {/* Телефон */}
                 <div>
+                    <label className="text-[10px] text-white/30 font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                        Телефон <span className="text-red-400">*</span>
+                    </label>
                     <input
                         type="tel"
                         placeholder="+7 (___) ___-__-__"
+                        required
                         value={phone}
                         onChange={handlePhoneChange}
                         onFocus={handlePhoneFocus}
