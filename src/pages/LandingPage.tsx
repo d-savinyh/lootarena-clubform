@@ -107,6 +107,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     if (!landing) return null;
 
     const brandColor = landing.form.brandColor || '#30D158';
+    // Фильтрация "none" значений из n8n (fallback для пустых строк в Postgres queryReplacement)
+    const clean = (v?: string) => v && v !== 'none' ? v : undefined;
 
     return (
         <>
@@ -142,9 +144,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         {/* Карточка оффера */}
                         <OfferCard
                             title={landing.form.offerTitle}
-                            description={landing.form.offerDescription || ''}
-                            terms={landing.form.offerTerms}
-                            badge={landing.form.offerBadge}
+                            description={clean(landing.form.offerDescription) || ''}
+                            terms={clean(landing.form.offerTerms)}
+                            badge={clean(landing.form.offerBadge)}
                             brandColor={brandColor}
                         />
 

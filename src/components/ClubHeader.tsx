@@ -4,9 +4,20 @@ interface ClubHeaderProps {
     clubName: string;
     clubLogo?: string;
     address: string;
-    workingHours?: string;
+    workingHours?: any;
     brandColor: string;
 }
+
+const formatWorkingHours = (wh: any): string | null => {
+    if (!wh) return null;
+    if (typeof wh === 'string') return wh;
+    if (wh.is24_7) return 'Круглосуточно';
+    if (wh.days) {
+        const first = Object.values(wh.days)[0] as any;
+        if (first?.open && first?.close) return `${first.open} — ${first.close}`;
+    }
+    return null;
+};
 
 const ClubHeader: React.FC<ClubHeaderProps> = ({ clubName, clubLogo, address, workingHours, brandColor }) => {
     const initials = clubName
@@ -15,6 +26,7 @@ const ClubHeader: React.FC<ClubHeaderProps> = ({ clubName, clubLogo, address, wo
         .join('')
         .slice(0, 2)
         .toUpperCase();
+    const hoursText = formatWorkingHours(workingHours);
 
     return (
         <div className="flex items-center gap-4 animate-slide-up">
@@ -45,12 +57,12 @@ const ClubHeader: React.FC<ClubHeaderProps> = ({ clubName, clubLogo, address, wo
                     </svg>
                     <span className="text-xs text-white/40 truncate">{address}</span>
                 </div>
-                {workingHours && (
+                {hoursText && (
                     <div className="flex items-center gap-2 mt-0.5">
                         <svg className="w-3.5 h-3.5 text-white/40 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span className="text-xs text-white/40">{workingHours}</span>
+                        <span className="text-xs text-white/40">{hoursText}</span>
                     </div>
                 )}
             </div>
