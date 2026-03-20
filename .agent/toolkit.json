@@ -1,0 +1,17 @@
+{
+    "stacks": [
+        "universal",
+        "stack-react",
+        "stack-backend"
+    ],
+    "mcp_profile": "lootarena",
+    "toolkit_repo": "https://github.com/d-savinyh/agent-toolkit.git",
+    "toolkit_local": "/tmp/agent-toolkit",
+    "project": {
+        "name": "ERP LootArena",
+        "n8n_url": "https://n8n.lootarena.ru",
+        "deploy_webhook": "/webhook/devops/deploy-notification",
+        "dokploy_app_id": "hDWH86oGXmlzGlPPyNofR",
+        "dockerignore_exclude": []
+    }
+}

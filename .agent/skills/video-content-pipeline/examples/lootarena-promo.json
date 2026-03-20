@@ -1,0 +1,92 @@
+{
+    "meta": {
+        "title": "LootArena Promo",
+        "compositionId": "LootArenaPromo",
+        "format": "reels",
+        "resolution": [
+            1080,
+            1920
+        ],
+        "fps": 30,
+        "voice": {
+            "name": "Eric",
+            "id": "cjVigY5qzO86Huf0OWal",
+            "model": "eleven_multilingual_v2",
+            "language": "ru",
+            "stability": 0.5,
+            "similarity_boost": 0.75,
+            "style": 0.3
+        }
+    },
+    "scenes": [
+        {
+            "id": "intro",
+            "narration": "Loot Arena — ERP-система для компьютерных клубов нового поколения.",
+            "sfx": [],
+            "visuals": {
+                "type": "intro",
+                "title": "Loot Arena",
+                "subtitle": "Управляй клубом по-новому",
+                "elements": [
+                    "logo",
+                    "title",
+                    "glow-pulse"
+                ],
+                "transition_in": "none",
+                "transition_out": "fade"
+            }
+        },
+        {
+            "id": "dashboard",
+            "narration": "Загрузка зон в реальном времени. Кто за каким ПК. Длительность каждой сессии.",
+            "sfx": [],
+            "visuals": {
+                "type": "feature",
+                "title": "Живой дашборд",
+                "elements": [
+                    "zone-bars",
+                    "session-cards",
+                    "live-indicator"
+                ],
+                "transition_in": "fade",
+                "transition_out": "fade",
+                "notes": "Анимированные бары загрузки зон, карточки активных сессий"
+            }
+        },
+        {
+            "id": "tools",
+            "narration": "Программы лояльности, миссии для игроков, аналитика финансов и отчёты по сменам.",
+            "sfx": [],
+            "visuals": {
+                "type": "showcase",
+                "title": "Инструменты",
+                "elements": [
+                    "loyalty-card",
+                    "missions-card",
+                    "analytics-card",
+                    "reports-card"
+                ],
+                "transition_in": "fade",
+                "transition_out": "fade",
+                "notes": "Четыре карточки модулей появляются по очереди с иконками"
+            }
+        },
+        {
+            "id": "outro",
+            "narration": "Loot Arena — управляй клубом ПО-НОВОМУ.",
+            "sfx": [],
+            "visuals": {
+                "type": "outro",
+                "title": "Loot Arena",
+                "subtitle": "lootarena.ru",
+                "elements": [
+                    "logo",
+                    "cta-button",
+                    "url"
+                ],
+                "transition_in": "fade",
+                "transition_out": "none"
+            }
+        }
+    ]
+}
