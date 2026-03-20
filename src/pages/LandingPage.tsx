@@ -154,6 +154,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         {/* Форма */}
                         <LeadForm
                             brandColor={brandColor}
+                            clubAddress={landing.club.address}
                             onSubmit={handleSubmit}
                             isLoading={isSubmitting}
                         />
@@ -171,7 +172,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                 <footer className="py-6 text-center">
                     <div className="flex items-center justify-center gap-1.5 text-[10px] text-white/15">
                         <span>Powered by</span>
-                        <span className="font-bold text-white/25">ClubForm</span>
+                        <span className="font-bold text-white/25">Loot Arena</span>
                     </div>
                 </footer>
             </div>

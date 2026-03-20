@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 
 interface LeadFormProps {
     brandColor: string;
+    clubAddress?: string;
     onSubmit: (data: { name: string; phone: string; telegram?: string }) => Promise<void>;
     isLoading?: boolean;
 }
 
-const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading }) => {
+const LeadForm: React.FC<LeadFormProps> = ({ brandColor, clubAddress, onSubmit, isLoading }) => {
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [telegram, setTelegram] = useState('');
@@ -61,6 +62,15 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading }) 
             <div className="glass rounded-3xl p-6 space-y-4">
                 <h3 className="text-lg font-bold text-white mb-1">Записаться</h3>
                 <p className="text-sm text-white/40 -mt-3 mb-4">Оставьте контакты — мы свяжемся с вами</p>
+                {clubAddress && (
+                    <div className="flex items-center gap-2 -mt-2 mb-4 px-3 py-2 rounded-xl bg-white/3">
+                        <svg className="w-3.5 h-3.5 text-white/30 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="text-xs text-white/30">{clubAddress}</span>
+                    </div>
+                )}
 
                 {/* Имя */}
                 <div>
