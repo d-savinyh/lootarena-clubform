@@ -11,7 +11,7 @@
         "name": "ERP LootArena",
         "n8n_url": "https://n8n.lootarena.ru",
         "deploy_webhook": "/webhook/devops/deploy-notification",
-        "dokploy_app_id": "hDWH86oGXmlzGlPPyNofR",
+        "dokploy_app_id": "3PXMjIVDYNJ59TlzEhI6Z",
         "dockerignore_exclude": []
     }
 }
