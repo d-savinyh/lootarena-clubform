@@ -9,11 +9,9 @@ interface LeadFormProps {
     isDesktop?: boolean;
 }
 
-const LeadForm: React.FC<LeadFormProps> = ({ brandColor, clubAddress, onSubmit, isLoading, isDesktop }) => {
-    const [name, setName] = useState('');
+const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading, isDesktop }) => {
     const [phone, setPhone] = useState('');
-    const [telegram, setTelegram] = useState('');
-    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [error, setError] = useState('');
 
     const formatPhone = (value: string) => {
         const digits = value.replace(/\D/g, '');
@@ -26,108 +24,45 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, clubAddress, onSubmit, 
     };
 
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const formatted = formatPhone(e.target.value);
-        setPhone(formatted);
-        if (errors.phone) setErrors(prev => ({ ...prev, phone: '' }));
+        setPhone(formatPhone(e.target.value));
+        if (error) setError('');
     };
 
-    const handlePhoneFocus = () => {
-        if (!phone) setPhone('+7');
-    };
-
-    const validate = () => {
-        const newErrors: Record<string, string> = {};
-        if (!name.trim()) newErrors.name = 'Введите имя';
-        const phoneDigits = phone.replace(/\D/g, '');
-        if (phoneDigits.length < 11) newErrors.phone = 'Введите номер телефона';
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
+    const handlePhoneFocus = () => { if (!phone) setPhone('+7'); };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!validate()) return;
-
         const phoneDigits = phone.replace(/\D/g, '');
-        await onSubmit({
-            name: name.trim(),
-            phone: `+${phoneDigits}`,
-            telegram: telegram.trim() || undefined,
-        });
+        if (phoneDigits.length < 11) { setError('Введите номер телефона'); return; }
+        await onSubmit({ name: '', phone: `+${phoneDigits}` });
     };
 
     const inputClass = (hasError: boolean) =>
-        `w-full rounded-2xl text-white placeholder:text-white/20 font-medium transition-all input-apple ${isDesktop ? 'px-5 py-4 text-base' : 'px-4 py-3.5 text-sm'
+        `w-full rounded-2xl text-white placeholder:text-white/20 font-medium transition-all input-apple text-center tracking-wide ${isDesktop ? 'px-5 py-5 text-lg' : 'px-4 py-4 text-base'
         } ${hasError ? 'input-error' : ''}`;
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-5 animate-slide-up-delay-2">
-            <div className={`glass rounded-[28px] space-y-5 ${isDesktop ? 'p-8' : 'p-6'}`}>
-                <div>
-                    <h3 className={`font-black text-white mb-1 ${isDesktop ? 'text-2xl' : 'text-xl'}`}>
-                        Записаться
-                    </h3>
-                    <p className="text-sm text-white/35 mb-5">
-                        Оставьте контакты — мы свяжемся с вами
-                    </p>
-                </div>
+        <form onSubmit={handleSubmit} className="space-y-4 animate-slide-up-delay-2">
+            <div className={`glass rounded-[28px] ${isDesktop ? 'p-8' : 'p-6'}`}>
+                <h3 className={`font-black text-white mb-1 ${isDesktop ? 'text-2xl' : 'text-xl'}`}>
+                    Забери подарок
+                </h3>
+                <p className="text-sm text-white/35 mb-5">
+                    Введите номер — подарок придёт в приложение после регистрации
+                </p>
 
-                {clubAddress && (
-                    <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl glass-light">
-                        <svg className="w-4 h-4 text-white/30 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span className="text-xs text-white/30">{clubAddress}</span>
-                    </div>
-                )}
-
-                {/* Имя */}
-                <div>
-                    <label className="text-[11px] text-white/30 font-semibold uppercase tracking-wider mb-2 flex items-center gap-1">
-                        Имя <span style={{ color: brandColor }}>*</span>
-                    </label>
-                    <input
-                        type="text"
-                        placeholder="Ваше имя"
-                        required
-                        value={name}
-                        onChange={e => {
-                            setName(e.target.value);
-                            if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
-                        }}
-                        className={inputClass(!!errors.name)}
-                    />
-                    {errors.name && <p className="text-xs text-red-400 mt-1.5 ml-1">{errors.name}</p>}
-                </div>
-
-                {/* Телефон */}
-                <div>
-                    <label className="text-[11px] text-white/30 font-semibold uppercase tracking-wider mb-2 flex items-center gap-1">
-                        Телефон <span style={{ color: brandColor }}>*</span>
-                    </label>
-                    <input
-                        type="tel"
-                        placeholder="+7 (___) ___-__-__"
-                        required
-                        value={phone}
-                        onChange={handlePhoneChange}
-                        onFocus={handlePhoneFocus}
-                        className={inputClass(!!errors.phone)}
-                    />
-                    {errors.phone && <p className="text-xs text-red-400 mt-1.5 ml-1">{errors.phone}</p>}
-                </div>
-
-                {/* Telegram */}
-                <div>
-                    <input
-                        type="text"
-                        placeholder="@telegram (необязательно)"
-                        value={telegram}
-                        onChange={e => setTelegram(e.target.value)}
-                        className={inputClass(false)}
-                    />
-                </div>
+                <input
+                    type="tel"
+                    inputMode="tel"
+                    placeholder="+7 (___) ___-__-__"
+                    required
+                    autoFocus
+                    value={phone}
+                    onChange={handlePhoneChange}
+                    onFocus={handlePhoneFocus}
+                    className={inputClass(!!error)}
+                />
+                {error && <p className="text-xs text-red-400 mt-2 text-center">{error}</p>}
             </div>
 
             {/* CTA-кнопка */}

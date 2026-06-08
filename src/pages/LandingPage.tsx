@@ -32,6 +32,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [promoCode, setPromoCode] = useState<string>();
+    const [submittedPhone, setSubmittedPhone] = useState<string>();
+    const [variant, setVariant] = useState<string>();
     const [error, setError] = useState<string>();
     const isDesktop = useIsDesktop();
 
@@ -43,13 +45,28 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
         campaign: params.get('utm_campaign') || undefined,
     };
 
+    // Click ID рекламных систем (для offline-конверсий VK/Яндекс)
+    const clickIds: Record<string, string> = (() => {
+        const keys = ['yclid', 'ymclid', 'gclid', 'fbclid', '_openstat', 'vk_click_id', 'erid'];
+        const o: Record<string, string> = {};
+        keys.forEach(k => { const v = params.get(k); if (v) o[k] = v; });
+        return o;
+    })();
+
     useEffect(() => {
         const load = async () => {
             try {
-                const data = await getLandingData(slug);
+                let stored: string | undefined;
+                try { stored = localStorage.getItem(`cf_variant_${slug}`) || undefined; } catch { /* нет localStorage */ }
+                const data = await getLandingData(slug, stored);
                 if (data) {
                     setLanding(data);
-                    trackView(data.form.id, utm);
+                    const v = data.form.variant;
+                    if (v) {
+                        setVariant(v);
+                        try { localStorage.setItem(`cf_variant_${slug}`, v); } catch { /* игнор */ }
+                    }
+                    trackView(data.form.id, utm, v);
                     // Обновляем title страницы
                     document.title = `${data.club.name} — ${data.form.offerTitle}`;
                 } else {
@@ -68,6 +85,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
         if (!landing) return;
         setIsSubmitting(true);
         setError(undefined);
+        setSubmittedPhone(formData.phone);
 
         try {
             const result = await submitLead({
@@ -79,6 +97,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                 utm_source: utm.source,
                 utm_medium: utm.medium,
                 utm_campaign: utm.campaign,
+                variant,
+                click_ids: Object.keys(clickIds).length ? clickIds : undefined,
             });
 
             if (result.ok) {
@@ -128,6 +148,33 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     const brandColor = landing.form.brandColor || '#30D158';
     const clean = (v?: string) => v && v !== 'none' ? v : undefined;
 
+    const gift = landing.form.gift || null;
+    const coverUrl = landing.form.coverImage || landing.club.coverUrl;
+    const buildAppUrl = (phone?: string) => {
+        const p = new URLSearchParams();
+        if (phone) p.set('phone', phone);
+        p.set('ref', 'clubform');
+        p.set('club', landing.form.slug);
+        if (utm.source) p.set('utm_source', utm.source);
+        if (utm.medium) p.set('utm_medium', utm.medium);
+        if (utm.campaign) p.set('utm_campaign', utm.campaign);
+        return `https://app.lootarena.ru/?${p.toString()}`;
+    };
+
+    const giftCard = gift ? (
+        <div className="glass rounded-2xl p-4 flex items-center gap-3 animate-fade-in">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0" style={{ backgroundColor: `${brandColor}18` }}>
+                {gift.reward_icon || '🎁'}
+            </div>
+            <div className="min-w-0">
+                <div className="text-[11px] uppercase tracking-wider text-white/35 font-semibold mb-0.5">Подарок за регистрацию</div>
+                <div className="text-base font-black text-white truncate">
+                    {gift.reward_text || (gift.reward_meta?.bonus_amount ? `${gift.reward_meta.bonus_amount} бонусов` : 'Подарок')}
+                </div>
+            </div>
+        </div>
+    ) : null;
+
     // ══════════════════════════════════════════════
     // ██  ДЕСКТОПНЫЙ LAYOUT — двухколоночный       ██
     // ══════════════════════════════════════════════
@@ -140,7 +187,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         <ClubHeader
                             clubName={landing.club.name}
                             clubLogo={landing.club.avatarUrl}
-                            coverUrl={landing.club.coverUrl}
+                            coverUrl={coverUrl}
                             address={landing.club.address}
                             workingHours={landing.club.workingHours}
                             brandColor={brandColor}
@@ -168,6 +215,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                                 brandColor={brandColor}
                                 isDesktop
                             />
+
+                            {giftCard}
 
                             {/* Форма */}
                             <LeadForm
@@ -201,6 +250,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                     <SuccessScreen
                         clubName={landing.club.name}
                         promoCode={promoCode}
+                        gift={gift}
+                        appUrl={buildAppUrl(submittedPhone)}
                         brandColor={brandColor}
                         address={landing.club.address}
                         onClose={() => setShowSuccess(false)}
@@ -232,7 +283,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         <ClubHeader
                             clubName={landing.club.name}
                             clubLogo={landing.club.avatarUrl}
-                            coverUrl={landing.club.coverUrl}
+                            coverUrl={coverUrl}
                             address={landing.club.address}
                             workingHours={landing.club.workingHours}
                             brandColor={brandColor}
@@ -246,6 +297,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                             badge={clean(landing.form.offerBadge)}
                             brandColor={brandColor}
                         />
+
+                        {giftCard}
 
                         {/* Форма */}
                         <LeadForm

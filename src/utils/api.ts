@@ -25,7 +25,18 @@ export interface ClubLanding {
         offerTerms?: string;
         offerBadge?: string;
         brandColor: string;
+        gift?: LeadGift | null;
+        variant?: 'A' | 'B';
+        coverImage?: string | null;
     };
+}
+
+export interface LeadGift {
+    reward_type: 'BONUSES' | 'MONEY' | 'PRODUCT' | 'MANUAL';
+    reward_text?: string;
+    reward_icon?: string;
+    reward_meta?: { bonus_amount?: number;[k: string]: any };
+    expires_in_days?: string;
 }
 
 export interface LeadSubmission {
@@ -37,6 +48,8 @@ export interface LeadSubmission {
     utm_source?: string;
     utm_medium?: string;
     utm_campaign?: string;
+    variant?: string;
+    click_ids?: Record<string, string>;
 }
 
 export interface SubmitResult {
@@ -62,10 +75,10 @@ async function callPublicAPI(action: string, data: Record<string, any> = {}): Pr
     return result;
 }
 
-// Получить данные лендинга по slug
-export async function getLandingData(slug: string): Promise<ClubLanding | null> {
+// Получить данные лендинга по slug (variant — сохранённый выбор A/B для консистентности при перезагрузке)
+export async function getLandingData(slug: string, variant?: string): Promise<ClubLanding | null> {
     try {
-        const res = await callPublicAPI('get_landing', { slug });
+        const res = await callPublicAPI('get_landing', { slug, variant });
         // n8n может вернуть массив или объект
         const data = Array.isArray(res) ? res[0] : res;
         if (!data || data.error) return null;
@@ -97,13 +110,14 @@ export async function trackView(formId: string, utm: {
     source?: string;
     medium?: string;
     campaign?: string;
-}): Promise<void> {
+}, variant?: string): Promise<void> {
     try {
         await callPublicAPI('track_view', {
             form_id: formId,
             utm_source: utm.source || '',
             utm_medium: utm.medium || '',
             utm_campaign: utm.campaign || '',
+            variant: variant || 'A',
             user_agent: navigator.userAgent,
             ip_hash: '', // заполняет бэкенд при необходимости
         });

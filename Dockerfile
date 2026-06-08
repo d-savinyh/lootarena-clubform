@@ -9,28 +9,19 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Продакшн — nginx
-FROM nginx:alpine
+# Продакшн — Node edge-сервер (SPA + динамические OG-теги + кеш get_landing)
+FROM node:20-alpine
 
-# Копируем собранные файлы
-COPY --from=build /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-# SPA роутинг — всё через index.html
-RUN echo 'server { \
-    listen 80; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { \
-        expires 1y; \
-        add_header Cache-Control "public, immutable"; \
-    } \
-    gzip on; \
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml; \
-}' > /etc/nginx/conf.d/default.conf
+# Только статика сборки и edge-сервер (server.js — zero-dependency, Node built-ins)
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/server.js ./server.js
+
+ENV PORT=80
+# SITE_ORIGIN и VITE_API_BASE_URL можно переопределить в Dokploy
+ENV SITE_ORIGIN=https://form.lootarena.ru
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["node", "server.js"]
