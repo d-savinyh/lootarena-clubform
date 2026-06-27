@@ -5,13 +5,18 @@ interface LeadFormProps {
     clubAddress?: string;
     onSubmit: (data: { name: string; phone: string; telegram?: string }) => Promise<void>;
     isLoading?: boolean;
+    /** Текст CTA-кнопки (из настроек формы) */
+    ctaText?: string;
+    /** Поведенческие события «кто что тыкает» */
+    onEvent?: (type: string, meta?: Record<string, any>) => void;
     /** Десктопный стиль — крупнее */
     isDesktop?: boolean;
 }
 
-const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading, isDesktop }) => {
+const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading, isDesktop, ctaText, onEvent }) => {
     const [phone, setPhone] = useState('');
     const [error, setError] = useState('');
+    const inputFired = React.useRef(false);
 
     const formatPhone = (value: string) => {
         const digits = value.replace(/\D/g, '');
@@ -26,14 +31,17 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading, is
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setPhone(formatPhone(e.target.value));
         if (error) setError('');
+        if (!inputFired.current) { inputFired.current = true; onEvent?.('field_input', { field: 'phone' }); }
     };
 
-    const handlePhoneFocus = () => { if (!phone) setPhone('+7'); };
+    const handlePhoneFocus = () => { if (!phone) setPhone('+7'); onEvent?.('field_focus', { field: 'phone' }); };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        onEvent?.('cta_click');
         const phoneDigits = phone.replace(/\D/g, '');
         if (phoneDigits.length < 11) { setError('Введите номер телефона'); return; }
+        onEvent?.('phone_valid');
         await onSubmit({ name: '', phone: `+${phoneDigits}` });
     };
 
@@ -85,7 +93,7 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading, is
                         Отправляем...
                     </span>
                 ) : (
-                    'Забрать оффер'
+                    ctaText || 'Забрать оффер'
                 )}
             </button>
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { LeadGift } from '../utils/api';
+import type { LeadGift, GiftStatus } from '../utils/api';
 
 interface SuccessScreenProps {
     clubName: string;
@@ -8,7 +8,7 @@ interface SuccessScreenProps {
     onClose?: () => void;
     gift?: LeadGift | null;
     appUrl?: string;
-    promoCode?: string;
+    giftStatus?: GiftStatus;
 }
 
 const giftSummary = (gift: LeadGift): string => {
@@ -20,18 +20,12 @@ const giftSummary = (gift: LeadGift): string => {
     return 'Подарок';
 };
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, promoCode }) => {
-    const [copied, setCopied] = React.useState(false);
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus }) => {
     const mapsUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
-    const hasGift = !!gift;
-
-    const handleCopy = () => {
-        if (promoCode) {
-            navigator.clipboard.writeText(promoCode);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }
-    };
+    // Подарок показываем, только если он реально положен этому гостю (inventory/reserved).
+    // Если giftStatus='none' (форма без подарка ИЛИ гость не подходит под условие) — экран «Вы записаны».
+    const showGift = !!gift && giftStatus !== 'none';
+    const inInventory = giftStatus === 'inventory';
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 animate-fade-in" style={{ backgroundColor: 'rgba(0, 0, 0, 0.92)' }}>
@@ -49,7 +43,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                             className="w-28 h-28 rounded-full flex items-center justify-center animate-float text-5xl"
                             style={{ backgroundColor: `${brandColor}12` }}
                         >
-                            {hasGift ? (
+                            {showGift ? (
                                 <span>{gift!.reward_icon || '🎁'}</span>
                             ) : (
                                 <svg className="w-14 h-14" style={{ color: brandColor }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -64,13 +58,19 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                     </div>
                 </div>
 
-                {hasGift ? (
+                {showGift ? (
                     <>
-                        {/* Текст — подарок забронирован */}
+                        {/* Заголовок зависит от того, выдан ли подарок сразу или забронирован */}
                         <div className="text-center mb-8">
-                            <h2 className="text-3xl font-black text-white mb-4">Подарок забронирован!</h2>
+                            <h2 className="text-3xl font-black text-white mb-4">
+                                {inInventory ? 'Подарок уже в инвентаре!' : 'Подарок забронирован!'}
+                            </h2>
                             <p className="text-lg text-white/45 leading-relaxed">
-                                Забери его в приложении <span className="text-white font-bold">Loot Arena</span> — зарегистрируйся по своему номеру, и подарок уже будет ждать в инвентаре.
+                                {inInventory ? (
+                                    <>Открой приложение <span className="text-white font-bold">Loot Arena</span> — подарок уже лежит в твоём инвентаре.</>
+                                ) : (
+                                    <>Забери его в приложении <span className="text-white font-bold">Loot Arena</span> — зарегистрируйся по своему номеру, и подарок уже будет ждать в инвентаре.</>
+                                )}
                             </p>
                         </div>
 
@@ -90,7 +90,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                             </div>
                         </div>
 
-                        {/* Кнопка — забрать в приложении */}
+                        {/* Кнопка — в приложение */}
                         <a
                             href={appUrl || 'https://app.lootarena.ru'}
                             target="_blank"
@@ -98,7 +98,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                             className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl text-black font-black text-base mb-3 transition-transform hover:scale-[1.02]"
                             style={{ backgroundColor: brandColor }}
                         >
-                            Забрать в приложении
+                            {inInventory ? 'Открыть приложение' : 'Забрать в приложении'}
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                             </svg>
@@ -106,7 +106,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                     </>
                 ) : (
                     <>
-                        {/* Текст — записаны (легаси, без подарка) */}
+                        {/* Записаны (форма без подарка ИЛИ гость не подходит под условие подарка) */}
                         <div className="text-center mb-10">
                             <h2 className="text-3xl font-black text-white mb-4">Вы записаны!</h2>
                             <p className="text-lg text-white/45 leading-relaxed">
@@ -114,27 +114,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                                 Ждём вас в <span className="text-white font-bold">{clubName}</span>!
                             </p>
                         </div>
-
-                        {promoCode && (
-                            <div className="glass rounded-[24px] p-6 mb-5">
-                                <div className="text-[11px] text-white/35 font-semibold uppercase tracking-wider mb-3">Ваш промокод</div>
-                                <div className="flex items-center gap-3">
-                                    <div
-                                        className="flex-1 px-5 py-3.5 rounded-2xl text-center text-xl font-black tracking-[0.15em] text-black"
-                                        style={{ backgroundColor: brandColor }}
-                                    >
-                                        {promoCode}
-                                    </div>
-                                    <button
-                                        onClick={handleCopy}
-                                        className="px-5 py-3.5 rounded-2xl glass-light text-white/50 hover:text-white transition-all text-sm font-bold shrink-0"
-                                    >
-                                        {copied ? '✓' : 'Копировать'}
-                                    </button>
-                                </div>
-                                <p className="text-xs text-white/25 mt-3">Назовите промокод администратору при визите</p>
-                            </div>
-                        )}
                     </>
                 )}
 

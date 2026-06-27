@@ -28,6 +28,8 @@ export interface ClubLanding {
         gift?: LeadGift | null;
         variant?: 'A' | 'B';
         coverImage?: string | null;
+        ctaText?: string | null;
+        tracking?: { metrika?: string; vk_pixel?: string; top_mail?: string; meta?: string; gtag?: string } | null;
     };
 }
 
@@ -52,9 +54,13 @@ export interface LeadSubmission {
     click_ids?: Record<string, string>;
 }
 
+export type GiftStatus = 'inventory' | 'reserved' | 'none';
+
 export interface SubmitResult {
     ok: boolean;
-    promoCode?: string;
+    giftStatus?: GiftStatus;
+    eligible?: boolean;
+    duplicate?: boolean;
     submissionId?: string;
     error?: string;
 }
@@ -96,7 +102,9 @@ export async function submitLead(data: LeadSubmission): Promise<SubmitResult> {
         const result = Array.isArray(res) ? res[0] : res;
         return {
             ok: result?.ok ?? true,
-            promoCode: result?.promoCode || result?.promo_code,
+            giftStatus: (result?.giftStatus || result?.gift_status) as GiftStatus | undefined,
+            eligible: result?.eligible,
+            duplicate: result?.duplicate,
             submissionId: result?.submissionId || result?.id,
         };
     } catch (e) {
@@ -125,4 +133,105 @@ export async function trackView(formId: string, utm: {
         // Молча проглатываем ошибки трекинга — не критично
         console.warn('trackView error:', e);
     }
+}
+
+// ── Поведенческая аналитика «кто что тыкает» (lead-forms v2, Фаза 1) ──
+const EVENT_URL = `${API_URL}/public/clubform-event`;
+
+export function getSessionId(): string {
+    try {
+        let s = sessionStorage.getItem('cf_sid');
+        if (!s) {
+            s = (typeof crypto !== 'undefined' && crypto.randomUUID)
+                ? crypto.randomUUID()
+                : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            sessionStorage.setItem('cf_sid', s);
+        }
+        return s;
+    } catch { return 'anon'; }
+}
+
+export interface EvtCtx {
+    variant?: string;
+    utm?: { source?: string; medium?: string; campaign?: string };
+}
+
+// Отправка поведенческого события. useBeacon — для ухода со страницы (pagehide/abandon),
+// чтобы событие не потерялось. Иначе fetch keepalive. Трекинг не критичен — ошибки глотаем.
+export function trackEvent(
+    formId: string,
+    eventType: string,
+    meta: Record<string, any> = {},
+    ctx: EvtCtx = {},
+    useBeacon = false,
+): void {
+    if (!formId) return;
+    const body = JSON.stringify({
+        form_id: formId,
+        event_type: eventType,
+        session_id: getSessionId(),
+        variant: ctx.variant || 'A',
+        meta,
+        utm_source: ctx.utm?.source || '',
+        utm_medium: ctx.utm?.medium || '',
+        utm_campaign: ctx.utm?.campaign || '',
+        user_agent: navigator.userAgent,
+    });
+    try {
+        if (useBeacon && navigator.sendBeacon) {
+            navigator.sendBeacon(EVENT_URL, new Blob([body], { type: 'application/json' }));
+        } else {
+            fetch(EVENT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => { });
+        }
+    } catch { /* трекинг не критичен */ }
+}
+
+// ── Пиксели рекламных систем: инжект по ID из стандартных шаблонов (не сырой скрипт клуба) ──
+let pixelsInjected = false;
+export function injectPixels(t?: ClubLanding['form']['tracking']): void {
+    if (!t || pixelsInjected || typeof document === 'undefined') return;
+    pixelsInjected = true;
+    const w = window as any;
+    const addScript = (src: string) => { const s = document.createElement('script'); s.async = true; s.src = src; document.head.appendChild(s); };
+    // Яндекс.Метрика
+    if (t.metrika) {
+        w.ym = w.ym || function () { (w.ym.a = w.ym.a || []).push(arguments); };
+        w.ym.l = Date.now();
+        addScript('https://mc.yandex.ru/metrika/tag.js');
+        try { w.ym(Number(t.metrika), 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false }); } catch { /* noop */ }
+    }
+    // VK Пиксель / top.mail.ru (общий top-API _tmr)
+    if (t.vk_pixel || t.top_mail) {
+        w._tmr = w._tmr || [];
+        addScript('https://top-fwz1.mail.ru/js/code.js');
+        if (t.vk_pixel) w._tmr.push({ id: t.vk_pixel, type: 'pageView', start: Date.now() });
+        if (t.top_mail) w._tmr.push({ id: t.top_mail, type: 'pageView', start: Date.now() });
+    }
+    // Meta Pixel
+    if (t.meta) {
+        if (!w.fbq) {
+            const n: any = w.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); };
+            if (!w._fbq) w._fbq = n;
+            n.push = n; n.loaded = true; n.version = '2.0'; n.queue = [];
+            addScript('https://connect.facebook.net/en_US/fbevents.js');
+        }
+        try { w.fbq('init', t.meta); w.fbq('track', 'PageView'); } catch { /* noop */ }
+    }
+    // Google tag (GA4 / Google Ads)
+    if (t.gtag) {
+        addScript(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(t.gtag)}`);
+        w.dataLayer = w.dataLayer || [];
+        w.gtag = function () { w.dataLayer.push(arguments); };
+        try { w.gtag('js', new Date()); w.gtag('config', t.gtag); } catch { /* noop */ }
+    }
+}
+
+// Конверсия «лид» во все подключённые пиксели — на успешном сабмите. value = стоимость подарка (опц.).
+export function fireLeadConversion(t?: ClubLanding['form']['tracking'], value?: number): void {
+    if (!t || typeof window === 'undefined') return;
+    const w = window as any;
+    try { if (t.metrika && w.ym) w.ym(Number(t.metrika), 'reachGoal', 'lead'); } catch { /* noop */ }
+    try { if ((t.vk_pixel || t.top_mail) && w._tmr) w._tmr.push({ type: 'reachGoal', id: t.vk_pixel || t.top_mail, goal: 'lead', value: value || 0 }); } catch { /* noop */ }
+    try { if (t.meta && w.fbq) w.fbq('track', 'Lead', value ? { value, currency: 'RUB' } : {}); } catch { /* noop */ }
+    try { if (t.gtag && w.gtag) w.gtag('event', 'generate_lead', value ? { value, currency: 'RUB' } : {}); } catch { /* noop */ }
 }

@@ -3,7 +3,7 @@ import ClubHeader from '../components/ClubHeader';
 import OfferCard from '../components/OfferCard';
 import LeadForm from '../components/LeadForm';
 import SuccessScreen from '../components/SuccessScreen';
-import { getLandingData, submitLead, trackView, type ClubLanding } from '../utils/api';
+import { getLandingData, submitLead, trackView, trackEvent, injectPixels, fireLeadConversion, type ClubLanding } from '../utils/api';
 
 interface LandingPageProps {
     slug: string;
@@ -31,7 +31,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
-    const [promoCode, setPromoCode] = useState<string>();
+    const [submitted, setSubmitted] = useState(false);
+    const [giftStatus, setGiftStatus] = useState<'inventory' | 'reserved' | 'none'>();
     const [submittedPhone, setSubmittedPhone] = useState<string>();
     const [variant, setVariant] = useState<string>();
     const [error, setError] = useState<string>();
@@ -67,6 +68,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         try { localStorage.setItem(`cf_variant_${slug}`, v); } catch { /* игнор */ }
                     }
                     trackView(data.form.id, utm, v);
+                    // Пиксели рекламных систем (по ID) + поведенческое событие просмотра
+                    injectPixels(data.form.tracking);
+                    trackEvent(data.form.id, 'page_view', {}, { variant: v, utm });
                     // Обновляем title страницы
                     document.title = `${data.club.name} — ${data.form.offerTitle}`;
                 } else {
@@ -81,8 +85,34 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
         load();
     }, [slug]);
 
-    const handleSubmit = async (formData: { name: string; phone: string; telegram?: string }) => {
+    // Поведенческие события: глубина скролла (25/50/75/100) + уход со страницы (abandon через sendBeacon).
+    useEffect(() => {
         if (!landing) return;
+        const fid = landing.form.id;
+        const ctx = { variant, utm };
+        let maxDepth = 0;
+        const sent = new Set<number>();
+        const onScroll = () => {
+            const h = document.documentElement;
+            const denom = (h.scrollHeight - h.clientHeight) || 1;
+            const pct = Math.min(100, Math.max(0, Math.round((h.scrollTop / denom) * 100)));
+            if (pct > maxDepth) maxDepth = pct;
+            [25, 50, 75, 100].forEach(d => { if (pct >= d && !sent.has(d)) { sent.add(d); trackEvent(fid, 'scroll_depth', { pct: d }, ctx); } });
+        };
+        const onHide = () => trackEvent(fid, 'abandon', { max_scroll: maxDepth, converted: submitted }, ctx, true);
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('pagehide', onHide);
+        return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('pagehide', onHide); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [landing, variant, submitted]);
+
+    const handleSubmit = async (formData: { name: string; phone: string; telegram?: string }) => {
+        if (!landing || isSubmitting) return;
+        // Блок повторной отправки: заявка уже принята — просто показываем экран успеха, новую заявку не шлём
+        if (submitted) {
+            setShowSuccess(true);
+            return;
+        }
         setIsSubmitting(true);
         setError(undefined);
         setSubmittedPhone(formData.phone);
@@ -102,10 +132,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
             });
 
             if (result.ok) {
-                setPromoCode(result.promoCode);
+                setGiftStatus(result.giftStatus ?? (landing.form.gift ? 'reserved' : 'none'));
+                setSubmitted(true);
                 setShowSuccess(true);
+                // Конверсия «лид» во все подключённые пиксели + поведенческое событие
+                fireLeadConversion(landing.form.tracking, Number(landing.form.gift?.reward_meta?.bonus_amount) || undefined);
+                trackEvent(landing.form.id, 'submit_success', { giftStatus: result.giftStatus || 'none', duplicate: !!result.duplicate }, { variant, utm });
             } else {
                 setError(result.error || 'Произошла ошибка. Попробуйте ещё раз.');
+                trackEvent(landing.form.id, 'submit_error', { error: result.error || '' }, { variant, utm });
             }
         } catch {
             setError('Произошла ошибка. Попробуйте ещё раз.');
@@ -147,6 +182,26 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
 
     const brandColor = landing.form.brandColor || '#30D158';
     const clean = (v?: string) => v && v !== 'none' ? v : undefined;
+    const track = (type: string, meta: Record<string, any> = {}) => trackEvent(landing.form.id, type, meta, { variant, utm });
+    const ctaText = clean(landing.form.ctaText || undefined);
+    const socialRow = (() => {
+        const s = landing.club.socialLinks || {};
+        const items = ([
+            s.vk ? { label: 'ВКонтакте', url: s.vk } : null,
+            s.telegram ? { label: 'Telegram', url: s.telegram.startsWith('http') ? s.telegram : `https://t.me/${s.telegram.replace(/^@/, '')}` } : null,
+            s.instagram ? { label: 'Instagram', url: s.instagram } : null,
+        ].filter(Boolean)) as { label: string; url: string }[];
+        if (!items.length) return null;
+        return (
+            <div className="flex items-center justify-center gap-4 mb-3">
+                {items.map(it => (
+                    <a key={it.label} href={it.url} target="_blank" rel="noopener noreferrer"
+                        onClick={() => track('app_redirect_click', { social: it.label })}
+                        className="text-[12px] font-semibold text-white/30 hover:text-white/60 transition-colors">{it.label}</a>
+                ))}
+            </div>
+        );
+    })();
 
     const gift = landing.form.gift || null;
     const coverUrl = landing.form.coverImage || landing.club.coverUrl;
@@ -224,6 +279,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                                 clubAddress={landing.club.address}
                                 onSubmit={handleSubmit}
                                 isLoading={isSubmitting}
+                                ctaText={ctaText}
+                                onEvent={track}
                                 isDesktop
                             />
 
@@ -236,6 +293,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
 
                             {/* Футер */}
                             <footer className="pt-4 text-center">
+                                {socialRow}
                                 <div className="flex items-center justify-center gap-1.5 text-[11px] text-white/10">
                                     <span>Powered by</span>
                                     <span className="font-bold text-white/20">Loot Arena</span>
@@ -249,7 +307,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                 {showSuccess && (
                     <SuccessScreen
                         clubName={landing.club.name}
-                        promoCode={promoCode}
+                        giftStatus={giftStatus}
                         gift={gift}
                         appUrl={buildAppUrl(submittedPhone)}
                         brandColor={brandColor}
@@ -306,6 +364,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                             clubAddress={landing.club.address}
                             onSubmit={handleSubmit}
                             isLoading={isSubmitting}
+                            ctaText={ctaText}
+                            onEvent={track}
                         />
 
                         {/* Ошибка */}
@@ -319,6 +379,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
 
                 {/* Футер */}
                 <footer className="py-6 text-center">
+                    {socialRow}
                     <div className="flex items-center justify-center gap-1.5 text-[11px] text-white/10">
                         <span>Powered by</span>
                         <span className="font-bold text-white/20">Loot Arena</span>
@@ -330,7 +391,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
             {showSuccess && (
                 <SuccessScreen
                     clubName={landing.club.name}
-                    promoCode={promoCode}
+                    giftStatus={giftStatus}
+                    gift={gift}
+                    appUrl={buildAppUrl(submittedPhone)}
                     brandColor={brandColor}
                     address={landing.club.address}
                     onClose={() => setShowSuccess(false)}
