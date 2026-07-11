@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import type { LeadGift, GiftStatus } from '../utils/api';
 
 interface SuccessScreenProps {
@@ -27,15 +28,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
     const showGift = !!gift && giftStatus !== 'none';
     const inInventory = giftStatus === 'inventory';
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 animate-fade-in" style={{ backgroundColor: 'rgba(0, 0, 0, 0.92)' }}>
-            {/* Фоновый glow */}
-            <div
-                className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full blur-[150px] opacity-[0.06]"
-                style={{ backgroundColor: brandColor }}
-            />
+    const overlay = (
+        // Прокручиваемый оверлей: на невысоких экранах контент выше вьюпорта —
+        // overflow-y-auto + min-h-full позволяют доскроллить до нижних кнопок, иначе они уезжают за край.
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain animate-fade-in" style={{ backgroundColor: 'rgba(0, 0, 0, 0.92)' }}>
+            <div className="min-h-full flex items-center justify-center p-6">
+                {/* Фоновый glow — чисто декоративный, не должен перехватывать клики */}
+                <div
+                    className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full blur-[150px] opacity-[0.06]"
+                    style={{ backgroundColor: brandColor }}
+                />
 
-            <div className="relative max-w-md w-full animate-scale-in">
+                <div className="relative max-w-md w-full animate-scale-in">
                 {/* Иконка успеха */}
                 <div className="flex justify-center mb-8">
                     <div className="relative">
@@ -131,18 +135,23 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                     Построить маршрут
                 </a>
 
-                {/* Назад */}
-                {onClose && (
-                    <button
-                        onClick={onClose}
-                        className="w-full py-3 text-sm text-white/25 hover:text-white/50 transition-colors"
-                    >
-                        Вернуться
-                    </button>
-                )}
+                    {/* Назад */}
+                    {onClose && (
+                        <button
+                            onClick={onClose}
+                            className="w-full py-3 text-sm text-white/25 hover:text-white/50 transition-colors"
+                        >
+                            Вернуться
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );
+
+    // Рендерим в body через портал — так fixed-оверлей всегда привязан к вьюпорту
+    // и не может оказаться «заперт» внутри трансформированного/позиционированного родителя.
+    return typeof document !== 'undefined' ? createPortal(overlay, document.body) : overlay;
 };
 
 export default SuccessScreen;
