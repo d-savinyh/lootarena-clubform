@@ -8,6 +8,34 @@ _Нет незадеплоенных изменений._
 
 ---
 
+## [0.3.1] — 2026-07-11 `v0.3.1`
+
+### 🔧 Исправления
+
+- **Кликабельность кнопок на экране успеха** — `SuccessScreen`: оверлей был `fixed` с центрированием `flex items-center justify-center` и без прокрутки. На вьюпорте ниже высоты контента (версия с подарком ≈600px) нижние кнопки «Построить маршрут»/«Вернуться» уезжали за нижний край и становились недоступны (проявлялось при зуме браузера / масштабе ОС / невысоком окне — «на ноуте ок, на ПК нет»). Оверлей стал `overflow-y-auto` + внутренняя обёртка `min-h-full flex items-center justify-center`: короткий контент центрируется, высокий — скроллится. Дополнительно рендер через `createPortal` в `document.body` (fixed всегда привязан к вьюпорту, не запирается трансформированным родителем) и декоративный glow помечен `pointer-events-none`.
+
+### Затронутые файлы
+
+- `src/components/SuccessScreen.tsx`
+
+---
+
+## [0.3.0] — 2026-07-10 `v0.3.0`
+
+### 🆕 Новое
+
+- **Инструментация лендинга (lead-forms v2)** — сквозная аналитика и пиксели:
+  - `api.ts`: `session_id` + `trackEvent` (через `sendBeacon` для `abandon`), `injectPixels` (Метрика / VK / top.mail / Meta / Google по ID, а не сырым скриптом), `fireLeadConversion` (цель `lead` во все подключённые пиксели).
+  - `LandingPage`: инжект пикселей + `page_view` на загрузке, события `scroll_depth` (25/50/75/100) и `abandon`, конверсия и события на сабмите, рендер соцссылок (раньше приходили, но не отрисовывались), проброс `ctaText`/`onEvent`.
+  - `LeadForm`: события `field_focus`/`field_input`/`cta_click`/`phone_valid` + кастомный текст кнопки.
+  - `SuccessScreen`: показ подарка по `giftStatus` (`inventory`/`reserved`/`none`) вместо промокода.
+
+### Затронутые файлы
+
+- `src/utils/api.ts`, `src/pages/LandingPage.tsx`, `src/components/LeadForm.tsx`, `src/components/SuccessScreen.tsx`
+
+---
+
 ## [0.2.0] — 2026-06-08 `v0.2.0`
 
 ### 🆕 Новое
