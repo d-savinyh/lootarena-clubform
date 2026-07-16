@@ -313,6 +313,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         brandColor={brandColor}
                         address={landing.club.address}
                         onClose={() => setShowSuccess(false)}
+                        onEvent={track}
                     />
                 )}
             </>
@@ -397,6 +398,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                     brandColor={brandColor}
                     address={landing.club.address}
                     onClose={() => setShowSuccess(false)}
+                    onEvent={track}
                 />
             )}
         </>

@@ -10,7 +10,50 @@ interface SuccessScreenProps {
     gift?: LeadGift | null;
     appUrl?: string;
     giftStatus?: GiftStatus;
+    onEvent?: (type: string, meta?: Record<string, any>) => void;
 }
+
+/**
+ * Устойчивое открытие внешней ссылки.
+ *
+ * В клубном игровом шелле (встроенный WebView2, UA Chrome/119 + Edg/119.0.0.0)
+ * голый `<a target="_blank">` мёртв: default action уходит хосту как запрос нового
+ * окна (NewWindowRequested), хост его молча отклоняет — ни перехода, ни ошибки.
+ * При этом обычные React-onClick там работают (в телеметрии 294 cta_click).
+ *
+ * Поэтому открываем окно из JS: результат различим (null = хост отказал), и только
+ * при явном отказе уходим в текущую вкладку. Безусловный same-tab делать нельзя:
+ * если шелл режет и навигацию, мы снесём экран успеха (это state, не роут) и гость
+ * останется без пути назад при уже выданном подарке.
+ */
+const openExternal = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    url: string,
+    where: string,
+    onEvent?: (type: string, meta?: Record<string, any>) => void,
+) => {
+    // Ctrl/Cmd/Shift-клик — отдаём браузеру, не угоняем.
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+
+    onEvent?.('app_redirect_click', { where });
+
+    // Гасим нативный _blank всегда — иначе при удачном window.open откроется два окна.
+    e.preventDefault();
+
+    let w: Window | null = null;
+    try {
+        // Без 'noopener': с этим флагом window.open по спеке возвращает null даже
+        // при успехе — детект отказа сломался бы. Chromium и так рвёт opener для _blank.
+        w = window.open(url, '_blank');
+    } catch {
+        w = null;
+    }
+
+    if (w) return;
+
+    // Хост отказал в новом окне — единственный оставшийся путь.
+    window.location.assign(url);
+};
 
 const giftSummary = (gift: LeadGift): string => {
     const t = gift.reward_text?.trim();
@@ -21,7 +64,7 @@ const giftSummary = (gift: LeadGift): string => {
     return 'Подарок';
 };
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus }) => {
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, onEvent }) => {
     const mapsUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
     // Подарок показываем, только если он реально положен этому гостю (inventory/reserved).
     // Если giftStatus='none' (форма без подарка ИЛИ гость не подходит под условие) — экран «Вы записаны».
@@ -94,12 +137,14 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                             </div>
                         </div>
 
-                        {/* Кнопка — в приложение */}
+                        {/* Кнопка — в приложение. href оставлен для семантики и ПКМ «копировать адрес»,
+                            но реальное открытие идёт через openExternal (см. коммент к хелперу). */}
                         <a
                             href={appUrl || 'https://app.lootarena.ru'}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl text-black font-black text-base mb-3 transition-transform hover:scale-[1.02]"
+                            onClick={(e) => openExternal(e, appUrl || 'https://app.lootarena.ru', 'success_app', onEvent)}
+                            className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl text-black font-black text-base mb-3 transition-transform hover:scale-[1.02] active:scale-[0.97]"
                             style={{ backgroundColor: brandColor }}
                         >
                             {inInventory ? 'Открыть приложение' : 'Забрать в приложении'}
@@ -126,7 +171,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                     href={mapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl glass-light text-white/60 hover:text-white hover:bg-white/8 transition-all text-sm font-bold mb-3"
+                    onClick={(e) => openExternal(e, mapsUrl, 'success_maps', onEvent)}
+                    className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl glass-light text-white/60 hover:text-white hover:bg-white/8 active:bg-white/12 active:scale-[0.98] transition-all text-sm font-bold mb-3"
                 >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -139,7 +185,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                     {onClose && (
                         <button
                             onClick={onClose}
-                            className="w-full py-3 text-sm text-white/25 hover:text-white/50 transition-colors"
+                            className="w-full py-3 text-sm text-white/25 hover:text-white/50 active:text-white/70 transition-colors"
                         >
                             Вернуться
                         </button>
