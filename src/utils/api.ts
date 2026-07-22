@@ -50,6 +50,9 @@ export interface LeadSubmission {
     utm_source?: string;
     utm_medium?: string;
     utm_campaign?: string;
+    utm_content?: string;   // VK Реклама: ID объявления (banner_id); Яндекс: и т.п.
+    utm_term?: string;      // ключевое слово / доп. метка
+    raw_utm?: Record<string, string>;  // сырые метки: ВСЕ query-параметры страницы (чтобы ничего не терять)
     variant?: string;
     click_ids?: Record<string, string>;
 }
@@ -118,13 +121,18 @@ export async function trackView(formId: string, utm: {
     source?: string;
     medium?: string;
     campaign?: string;
-}, variant?: string): Promise<void> {
+    content?: string;
+    term?: string;
+}, variant?: string, rawUtm?: Record<string, string>): Promise<void> {
     try {
         await callPublicAPI('track_view', {
             form_id: formId,
             utm_source: utm.source || '',
             utm_medium: utm.medium || '',
             utm_campaign: utm.campaign || '',
+            utm_content: utm.content || '',
+            utm_term: utm.term || '',
+            raw_utm: rawUtm && Object.keys(rawUtm).length ? rawUtm : undefined,
             variant: variant || 'A',
             user_agent: navigator.userAgent,
             ip_hash: '', // заполняет бэкенд при необходимости
@@ -153,7 +161,7 @@ export function getSessionId(): string {
 
 export interface EvtCtx {
     variant?: string;
-    utm?: { source?: string; medium?: string; campaign?: string };
+    utm?: { source?: string; medium?: string; campaign?: string; content?: string; term?: string };
 }
 
 // Отправка поведенческого события. useBeacon — для ухода со страницы (pagehide/abandon),
@@ -175,6 +183,8 @@ export function trackEvent(
         utm_source: ctx.utm?.source || '',
         utm_medium: ctx.utm?.medium || '',
         utm_campaign: ctx.utm?.campaign || '',
+        utm_content: ctx.utm?.content || '',
+        utm_term: ctx.utm?.term || '',
         user_agent: navigator.userAgent,
     });
     try {

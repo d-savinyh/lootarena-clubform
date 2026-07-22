@@ -38,13 +38,23 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     const [error, setError] = useState<string>();
     const isDesktop = useIsDesktop();
 
-    // UTM параметры из URL
+    // UTM параметры из URL. Источник нормализуем к нижнему регистру, чтобы 2gis/2GIS не двоились в аналитике.
     const params = new URLSearchParams(window.location.search);
     const utm = {
-        source: params.get('utm_source') || undefined,
+        source: (params.get('utm_source') || '').trim().toLowerCase() || undefined,
         medium: params.get('utm_medium') || undefined,
         campaign: params.get('utm_campaign') || undefined,
+        content: params.get('utm_content') || undefined,   // VK Реклама: ID объявления (banner_id)
+        term: params.get('utm_term') || undefined,
     };
+
+    // Сырые метки: сохраняем ВСЕ query-параметры страницы (в т.ч. VK/Яндекс-специфичные),
+    // чтобы никогда не потерять детализацию, даже если она не в стандартных utm_*.
+    const rawUtm: Record<string, string> = (() => {
+        const o: Record<string, string> = {};
+        params.forEach((v, k) => { if (v && k.length <= 64 && v.length <= 512) o[k] = v; });
+        return o;
+    })();
 
     // Click ID рекламных систем (для offline-конверсий VK/Яндекс)
     const clickIds: Record<string, string> = (() => {
@@ -67,7 +77,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         setVariant(v);
                         try { localStorage.setItem(`cf_variant_${slug}`, v); } catch { /* игнор */ }
                     }
-                    trackView(data.form.id, utm, v);
+                    trackView(data.form.id, utm, v, rawUtm);
                     // Пиксели рекламных систем (по ID) + поведенческое событие просмотра
                     injectPixels(data.form.tracking);
                     trackEvent(data.form.id, 'page_view', {}, { variant: v, utm });
@@ -127,6 +137,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                 utm_source: utm.source,
                 utm_medium: utm.medium,
                 utm_campaign: utm.campaign,
+                utm_content: utm.content,
+                utm_term: utm.term,
+                raw_utm: Object.keys(rawUtm).length ? rawUtm : undefined,
                 variant,
                 click_ids: Object.keys(clickIds).length ? clickIds : undefined,
             });
