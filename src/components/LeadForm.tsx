@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 interface LeadFormProps {
     brandColor: string;
     clubAddress?: string;
-    onSubmit: (data: { name: string; phone: string; telegram?: string }) => Promise<void>;
+    onSubmit: (data: { name: string; phone: string; telegram?: string; hp?: string; formMs?: number }) => Promise<void>;
     isLoading?: boolean;
     /** Текст CTA-кнопки (из настроек формы) */
     ctaText?: string;
@@ -11,12 +11,19 @@ interface LeadFormProps {
     onEvent?: (type: string, meta?: Record<string, any>) => void;
     /** Десктопный стиль — крупнее */
     isDesktop?: boolean;
+    /** Внешняя ошибка отправки (лимит запросов, отказ капчи) — показывается под полем */
+    submitError?: string;
 }
 
-const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading, isDesktop, ctaText, onEvent }) => {
+const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading, isDesktop, ctaText, onEvent, submitError }) => {
     const [phone, setPhone] = useState('');
     const [error, setError] = useState('');
     const inputFired = React.useRef(false);
+    // Ловушка для ботов: поле скрыто от глаз и от скринридеров, человек его не заполнит
+    // ни при каких обстоятельствах, а автозаполнялки ботов бьют по всем input'ам подряд.
+    const [hp, setHp] = useState('');
+    // Момент показа формы. Сервер отбраковывает отправку быстрее 1.5 с — руками так не успеть.
+    const mountedAt = React.useRef(Date.now());
 
     const formatPhone = (value: string) => {
         const digits = value.replace(/\D/g, '');
@@ -42,7 +49,7 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading, is
         const phoneDigits = phone.replace(/\D/g, '');
         if (phoneDigits.length < 11) { setError('Введите номер телефона'); return; }
         onEvent?.('phone_valid');
-        await onSubmit({ name: '', phone: `+${phoneDigits}` });
+        await onSubmit({ name: '', phone: `+${phoneDigits}`, hp, formMs: Date.now() - mountedAt.current });
     };
 
     const inputClass = (hasError: boolean) =>
@@ -70,7 +77,22 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading, is
                     onFocus={handlePhoneFocus}
                     className={inputClass(!!error)}
                 />
-                {error && <p className="text-xs text-red-400 mt-2 text-center">{error}</p>}
+                {(error || submitError) && <p className="text-xs text-red-400 mt-2 text-center">{error || submitError}</p>}
+
+                {/* Honeypot. Не `display:none` — часть ботов такие поля пропускает; уводим за
+                    пределы экрана, закрываем от табуляции, автозаполнения и скринридеров. */}
+                <div aria-hidden="true" className="absolute w-px h-px -left-[9999px] overflow-hidden">
+                    <label htmlFor="cf-company">Не заполняйте это поле</label>
+                    <input
+                        id="cf-company"
+                        name="company"
+                        type="text"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        value={hp}
+                        onChange={(e) => setHp(e.target.value)}
+                    />
+                </div>
             </div>
 
             {/* CTA-кнопка */}

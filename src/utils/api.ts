@@ -47,6 +47,12 @@ export interface LeadSubmission {
     name: string;
     phone: string;
     telegram?: string;
+    /** Honeypot: скрытое поле формы. Непустое = бот, сервер тихо отбрасывает заявку. */
+    hp?: string;
+    /** Сколько миллисекунд гость заполнял форму. Меньше 1.5 с — не человек. */
+    form_ms?: number;
+    /** Токен SmartCaptcha — только на повторной отправке, когда сервер её запросил. */
+    captcha_token?: string;
     utm_source?: string;
     utm_medium?: string;
     utm_campaign?: string;
@@ -72,6 +78,12 @@ export interface SubmitResult {
     duplicate?: boolean;
     submissionId?: string;
     error?: string;
+    /** Сервер просит пройти капчу и повторить отправку с токеном. */
+    requireCaptcha?: boolean;
+    /** Публичный ключ SmartCaptcha (приходит вместе с requireCaptcha). */
+    captchaKey?: string;
+    /** Сколько секунд ждать после жёсткого лимита по IP. */
+    retryAfter?: number;
 }
 
 // Вызов публичного n8n webhook
@@ -116,6 +128,10 @@ export async function submitLead(data: LeadSubmission): Promise<SubmitResult> {
             eligible: result?.eligible,
             duplicate: result?.duplicate,
             submissionId: result?.submissionId || result?.id,
+            error: result?.error,
+            requireCaptcha: !!(result?.requireCaptcha ?? result?.require_captcha),
+            captchaKey: result?.captchaKey || result?.captcha_key,
+            retryAfter: Number(result?.retryAfter ?? result?.retry_after) || undefined,
         };
     } catch (e) {
         console.error('submitLead error:', e);

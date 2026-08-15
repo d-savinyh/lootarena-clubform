@@ -4,6 +4,7 @@ import OfferCard from '../components/OfferCard';
 import LeadForm from '../components/LeadForm';
 import SuccessScreen from '../components/SuccessScreen';
 import { getLandingData, submitLead, trackView, trackEvent, injectPixels, fireLeadConversion, type ClubLanding, type GiftReason } from '../utils/api';
+import { solveCaptcha } from '../utils/captcha';
 
 interface LandingPageProps {
     slug: string;
@@ -34,6 +35,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     const [submitted, setSubmitted] = useState(false);
     const [giftStatus, setGiftStatus] = useState<'inventory' | 'reserved' | 'none'>();
     const [giftReason, setGiftReason] = useState<GiftReason>();
+    // Ошибка ОТПРАВКИ (лимит, отказ капчи) — в отличие от `error` не подменяет собой весь лендинг,
+    // а показывается под полем телефона: страница жива, гость может повторить.
+    const [submitError, setSubmitError] = useState<string>();
     const [submittedPhone, setSubmittedPhone] = useState<string>();
     const [variant, setVariant] = useState<string>();
     const [error, setError] = useState<string>();
@@ -117,7 +121,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [landing, variant, submitted]);
 
-    const handleSubmit = async (formData: { name: string; phone: string; telegram?: string }) => {
+    const handleSubmit = async (formData: { name: string; phone: string; telegram?: string; hp?: string; formMs?: number }) => {
         if (!landing || isSubmitting) return;
         // Блок повторной отправки: заявка уже принята — просто показываем экран успеха, новую заявку не шлём
         if (submitted) {
@@ -126,15 +130,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
         }
         setIsSubmitting(true);
         setError(undefined);
+        setSubmitError(undefined);
         setSubmittedPhone(formData.phone);
 
         try {
-            const result = await submitLead({
+            const payload = {
                 form_id: landing.form.id,
                 club_id: '',
                 name: formData.name,
                 phone: formData.phone,
                 telegram: formData.telegram,
+                hp: formData.hp,
+                form_ms: formData.formMs,
                 utm_source: utm.source,
                 utm_medium: utm.medium,
                 utm_campaign: utm.campaign,
@@ -143,7 +150,27 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                 raw_utm: Object.keys(rawUtm).length ? rawUtm : undefined,
                 variant,
                 click_ids: Object.keys(clickIds).length ? clickIds : undefined,
-            });
+            };
+
+            let result = await submitLead(payload);
+
+            // Сервер счёл отправку подозрительной (скорость заполнения / всплеск с одного IP)
+            // и просит капчу. Прогоняем невидимую проверку и отправляем ту же заявку с токеном.
+            if (!result.ok && result.requireCaptcha && result.captchaKey) {
+                trackEvent(landing.form.id, 'submit_error', { error: 'captcha_required' }, { variant, utm });
+                const token = await solveCaptcha(result.captchaKey);
+                if (!token) {
+                    setSubmitError('Не удалось подтвердить, что вы не робот. Попробуйте ещё раз.');
+                    return;
+                }
+                result = await submitLead({ ...payload, captcha_token: token });
+            }
+
+            if (!result.ok && result.error === 'too_many_requests') {
+                setSubmitError('Слишком много заявок с этого устройства. Попробуйте через 10 минут или позвоните в клуб.');
+                trackEvent(landing.form.id, 'submit_error', { error: 'too_many_requests' }, { variant, utm });
+                return;
+            }
 
             if (result.ok) {
                 setGiftStatus(result.giftStatus ?? (landing.form.gift ? 'reserved' : 'none'));
@@ -296,6 +323,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                                 isLoading={isSubmitting}
                                 ctaText={ctaText}
                                 onEvent={track}
+                                submitError={submitError}
                                 isDesktop
                             />
 
@@ -383,6 +411,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                             isLoading={isSubmitting}
                             ctaText={ctaText}
                             onEvent={track}
+                            submitError={submitError}
                         />
 
                         {/* Ошибка */}
