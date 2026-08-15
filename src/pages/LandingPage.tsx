@@ -3,7 +3,7 @@ import ClubHeader from '../components/ClubHeader';
 import OfferCard from '../components/OfferCard';
 import LeadForm from '../components/LeadForm';
 import SuccessScreen from '../components/SuccessScreen';
-import { getLandingData, submitLead, trackView, trackEvent, injectPixels, fireLeadConversion, type ClubLanding } from '../utils/api';
+import { getLandingData, submitLead, trackView, trackEvent, injectPixels, fireLeadConversion, type ClubLanding, type GiftReason } from '../utils/api';
 
 interface LandingPageProps {
     slug: string;
@@ -33,6 +33,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     const [showSuccess, setShowSuccess] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [giftStatus, setGiftStatus] = useState<'inventory' | 'reserved' | 'none'>();
+    const [giftReason, setGiftReason] = useState<GiftReason>();
     const [submittedPhone, setSubmittedPhone] = useState<string>();
     const [variant, setVariant] = useState<string>();
     const [error, setError] = useState<string>();
@@ -146,11 +147,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
 
             if (result.ok) {
                 setGiftStatus(result.giftStatus ?? (landing.form.gift ? 'reserved' : 'none'));
+                setGiftReason(result.giftReason);
                 setSubmitted(true);
                 setShowSuccess(true);
                 // Конверсия «лид» во все подключённые пиксели + поведенческое событие
                 fireLeadConversion(landing.form.tracking, Number(landing.form.gift?.reward_meta?.bonus_amount) || undefined);
-                trackEvent(landing.form.id, 'submit_success', { giftStatus: result.giftStatus || 'none', duplicate: !!result.duplicate }, { variant, utm });
+                trackEvent(landing.form.id, 'submit_success', { giftStatus: result.giftStatus || 'none', giftReason: result.giftReason || '', duplicate: !!result.duplicate }, { variant, utm });
             } else {
                 setError(result.error || 'Произошла ошибка. Попробуйте ещё раз.');
                 trackEvent(landing.form.id, 'submit_error', { error: result.error || '' }, { variant, utm });
@@ -321,6 +323,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                     <SuccessScreen
                         clubName={landing.club.name}
                         giftStatus={giftStatus}
+                        giftReason={giftReason}
                         gift={gift}
                         appUrl={buildAppUrl(submittedPhone)}
                         brandColor={brandColor}
@@ -406,6 +409,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                 <SuccessScreen
                     clubName={landing.club.name}
                     giftStatus={giftStatus}
+                    giftReason={giftReason}
                     gift={gift}
                     appUrl={buildAppUrl(submittedPhone)}
                     brandColor={brandColor}

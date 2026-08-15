@@ -59,9 +59,15 @@ export interface LeadSubmission {
 
 export type GiftStatus = 'inventory' | 'reserved' | 'none';
 
+// Почему подарка нет: granted — выдан/забронирован; already_gifted — по этому номеру
+// подарок с этой формы уже получали; not_eligible — гость не подходит под условие формы
+// (новым в Loot Arena / новым для клуба); no_gift — в форме подарок не настроен.
+export type GiftReason = 'granted' | 'already_gifted' | 'not_eligible' | 'no_gift' | 'duplicate';
+
 export interface SubmitResult {
     ok: boolean;
     giftStatus?: GiftStatus;
+    giftReason?: GiftReason;
     eligible?: boolean;
     duplicate?: boolean;
     submissionId?: string;
@@ -106,6 +112,7 @@ export async function submitLead(data: LeadSubmission): Promise<SubmitResult> {
         return {
             ok: result?.ok ?? true,
             giftStatus: (result?.giftStatus || result?.gift_status) as GiftStatus | undefined,
+            giftReason: (result?.giftReason || result?.gift_reason) as GiftReason | undefined,
             eligible: result?.eligible,
             duplicate: result?.duplicate,
             submissionId: result?.submissionId || result?.id,

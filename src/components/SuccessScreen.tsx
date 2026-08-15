@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import type { LeadGift, GiftStatus } from '../utils/api';
+import type { LeadGift, GiftStatus, GiftReason } from '../utils/api';
 
 interface SuccessScreenProps {
     clubName: string;
@@ -10,6 +10,7 @@ interface SuccessScreenProps {
     gift?: LeadGift | null;
     appUrl?: string;
     giftStatus?: GiftStatus;
+    giftReason?: GiftReason;
     onEvent?: (type: string, meta?: Record<string, any>) => void;
 }
 
@@ -64,12 +65,16 @@ const giftSummary = (gift: LeadGift): string => {
     return 'Подарок';
 };
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, onEvent }) => {
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, giftReason, onEvent }) => {
     const mapsUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
     // Подарок показываем, только если он реально положен этому гостю (inventory/reserved).
     // Если giftStatus='none' (форма без подарка ИЛИ гость не подходит под условие) — экран «Вы записаны».
     const showGift = !!gift && giftStatus !== 'none';
     const inInventory = giftStatus === 'inventory';
+    // Подарок по этому номеру уже получен раньше. Без объяснения гость думает, что заявка
+    // не прошла, и отправляет её снова (до фикса это и создавало повторные выдачи),
+    // поэтому прямо говорим, где искать первый подарок.
+    const alreadyGifted = !showGift && giftReason === 'already_gifted';
 
     const overlay = (
         // Прокручиваемый оверлей: на невысоких экранах контент выше вьюпорта —
@@ -92,6 +97,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                         >
                             {showGift ? (
                                 <span>{gift!.reward_icon || '🎁'}</span>
+                            ) : alreadyGifted ? (
+                                <span>{gift?.reward_icon || '🎁'}</span>
                             ) : (
                                 <svg className="w-14 h-14" style={{ color: brandColor }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -148,6 +155,32 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                             style={{ backgroundColor: brandColor }}
                         >
                             {inInventory ? 'Открыть приложение' : 'Забрать в приложении'}
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                        </a>
+                    </>
+                ) : alreadyGifted ? (
+                    <>
+                        {/* Подарок по этому номеру уже выдавали — заявка принята, но второго подарка не будет */}
+                        <div className="text-center mb-8">
+                            <h2 className="text-3xl font-black text-white mb-4">Заявка принята!</h2>
+                            <p className="text-lg text-white/45 leading-relaxed">
+                                Подарок по этому номеру вы уже получали — он в приложении{' '}
+                                <span className="text-white font-bold">Loot Arena</span>, в инвентаре.
+                                Второй раз подарок не выдаётся.
+                            </p>
+                        </div>
+
+                        <a
+                            href={appUrl || 'https://app.lootarena.ru'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => openExternal(e, appUrl || 'https://app.lootarena.ru', 'success_app_already', onEvent)}
+                            className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl text-black font-black text-base mb-3 transition-transform hover:scale-[1.02] active:scale-[0.97]"
+                            style={{ backgroundColor: brandColor }}
+                        >
+                            Открыть инвентарь
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                             </svg>
