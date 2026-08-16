@@ -3,7 +3,7 @@ import ClubHeader from '../components/ClubHeader';
 import OfferCard from '../components/OfferCard';
 import LeadForm from '../components/LeadForm';
 import SuccessScreen from '../components/SuccessScreen';
-import { getLandingData, submitLead, trackView, trackEvent, injectPixels, fireLeadConversion, type ClubLanding, type GiftReason } from '../utils/api';
+import { getLandingData, submitLead, trackView, trackEvent, injectPixels, fireLeadConversion, type ClubLanding, type GiftReason, type SubmitResult } from '../utils/api';
 import { solveCaptcha } from '../utils/captcha';
 
 interface LandingPageProps {
@@ -37,7 +37,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     const [giftReason, setGiftReason] = useState<GiftReason>();
     // Признаки, объясняющие экран успеха: повтор в пределах 30 минут и то, под какое
     // условие формы гость не подошёл (уже гость клуба / уже есть аккаунт).
-    const [submitMeta, setSubmitMeta] = useState<{ duplicate?: boolean; isClubGuest?: boolean; isAppUser?: boolean }>();
+    const [submitMeta, setSubmitMeta] = useState<{
+        duplicate?: boolean;
+        isClubGuest?: boolean;
+        isAppUser?: boolean;
+        prevGiftState?: SubmitResult['prevGiftState'];
+    }>();
     // Ошибка ОТПРАВКИ (лимит, отказ капчи) — в отличие от `error` не подменяет собой весь лендинг,
     // а показывается под полем телефона: страница жива, гость может повторить.
     const [submitError, setSubmitError] = useState<string>();
@@ -178,7 +183,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
             if (result.ok) {
                 setGiftStatus(result.giftStatus ?? (landing.form.gift ? 'reserved' : 'none'));
                 setGiftReason(result.giftReason);
-                setSubmitMeta({ duplicate: result.duplicate, isClubGuest: result.isClubGuest, isAppUser: result.isAppUser });
+                setSubmitMeta({ duplicate: result.duplicate, isClubGuest: result.isClubGuest, isAppUser: result.isAppUser, prevGiftState: result.prevGiftState });
                 setSubmitted(true);
                 setShowSuccess(true);
                 // Конверсия «лид» во все подключённые пиксели + поведенческое событие
@@ -323,6 +328,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                             <LeadForm
                                 brandColor={brandColor}
                                 clubAddress={landing.club.address}
+                                currency={landing.club.currency}
                                 onSubmit={handleSubmit}
                                 isLoading={isSubmitting}
                                 ctaText={ctaText}
@@ -359,6 +365,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         duplicate={submitMeta?.duplicate}
                         isClubGuest={submitMeta?.isClubGuest}
                         isAppUser={submitMeta?.isAppUser}
+                        prevGiftState={submitMeta?.prevGiftState}
                         gift={gift}
                         appUrl={buildAppUrl(submittedPhone)}
                         brandColor={brandColor}
@@ -414,6 +421,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         <LeadForm
                             brandColor={brandColor}
                             clubAddress={landing.club.address}
+                            currency={landing.club.currency}
                             onSubmit={handleSubmit}
                             isLoading={isSubmitting}
                             ctaText={ctaText}
@@ -449,6 +457,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                     duplicate={submitMeta?.duplicate}
                     isClubGuest={submitMeta?.isClubGuest}
                     isAppUser={submitMeta?.isAppUser}
+                    prevGiftState={submitMeta?.prevGiftState}
                     gift={gift}
                     appUrl={buildAppUrl(submittedPhone)}
                     brandColor={brandColor}

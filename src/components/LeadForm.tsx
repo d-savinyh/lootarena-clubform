@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
+import { getPhoneFormat, formatPhone as formatByCountry, phoneDigits, isValidPhone } from '../utils/phone';
 
 interface LeadFormProps {
     brandColor: string;
+    /** Валюта клуба — задаёт формат телефона: RUB → +7, BYN → +375, UZS → +998. */
+    currency?: string;
     clubAddress?: string;
     onSubmit: (data: { name: string; phone: string; telegram?: string; hp?: string; formMs?: number }) => Promise<void>;
     isLoading?: boolean;
@@ -15,7 +18,8 @@ interface LeadFormProps {
     submitError?: string;
 }
 
-const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading, isDesktop, ctaText, onEvent, submitError }) => {
+const LeadForm: React.FC<LeadFormProps> = ({ brandColor, currency, onSubmit, isLoading, isDesktop, ctaText, onEvent, submitError }) => {
+    const fmt = getPhoneFormat(currency);
     const [phone, setPhone] = useState('');
     const [error, setError] = useState('');
     const inputFired = React.useRef(false);
@@ -25,40 +29,29 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading, is
     // Момент показа формы. Сервер отбраковывает отправку быстрее 1.5 с — руками так не успеть.
     const mountedAt = React.useRef(Date.now());
 
-    const formatPhone = (value: string) => {
-        const digits = value.replace(/\D/g, '');
-        if (digits.length === 0) return '';
-        if (digits.length <= 1) return '+7';
-        if (digits.length <= 4) return `+7 (${digits.slice(1)}`;
-        if (digits.length <= 7) return `+7 (${digits.slice(1, 4)}) ${digits.slice(4)}`;
-        if (digits.length <= 9) return `+7 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
-        return `+7 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7, 9)}-${digits.slice(9, 11)}`;
-    };
-
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setPhone(formatPhone(e.target.value));
+        setPhone(formatByCountry(e.target.value, fmt));
         if (error) setError('');
         if (!inputFired.current) { inputFired.current = true; onEvent?.('field_input', { field: 'phone' }); }
     };
 
-    const handlePhoneFocus = () => { if (!phone) setPhone('+7'); onEvent?.('field_focus', { field: 'phone' }); };
+    const handlePhoneFocus = () => { if (!phone) setPhone(`+${fmt.code}`); onEvent?.('field_focus', { field: 'phone' }); };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         onEvent?.('cta_click');
-        const phoneDigits = phone.replace(/\D/g, '');
-        if (phoneDigits.length < 11) { setError('Введите номер телефона'); return; }
-        // Маска принимает любую цифру после +7, поэтому опечатка в одну позицию давала
-        // «валидный» номер вроде +7 (798) 185-04-15 — система считала его НОВЫМ и бронировала
-        // подарок на телефон, которым гость не владеет (за всю историю 29 таких заявок).
-        // Российские мобильные — только 79XXXXXXXXX; клубов в других странах пока нет.
-        if (!/^79\d{9}$/.test(phoneDigits)) {
-            setError('Проверьте номер: мобильные России начинаются с +7 9…');
+        const digits = phoneDigits(phone, fmt);
+        if (digits.length < fmt.total) { setError('Введите номер телефона'); return; }
+        // Маска принимала любую цифру после кода страны, поэтому опечатка в одну позицию
+        // давала «валидный» +7 (798) 185-04-15 — система считала его НОВЫМ номером и
+        // бронировала подарок на телефон, которым гость не владеет (29 таких заявок).
+        if (!isValidPhone(phone, fmt)) {
+            setError(fmt.hint);
             onEvent?.('submit_error', { error: 'phone_not_mobile' });
             return;
         }
         onEvent?.('phone_valid');
-        await onSubmit({ name: '', phone: `+${phoneDigits}`, hp, formMs: Date.now() - mountedAt.current });
+        await onSubmit({ name: '', phone: `+${digits}`, hp, formMs: Date.now() - mountedAt.current });
     };
 
     const inputClass = (hasError: boolean) =>
@@ -78,7 +71,7 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading, is
                 <input
                     type="tel"
                     inputMode="tel"
-                    placeholder="+7 (___) ___-__-__"
+                    placeholder={fmt.placeholder}
                     required
                     autoFocus
                     value={phone}

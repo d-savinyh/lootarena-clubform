@@ -15,6 +15,8 @@ export interface ClubLanding {
             telegram?: string;
             instagram?: string;
         };
+        /** Валюта клуба — по ней выбирается формат телефона (RUB → +7, BYN → +375, UZS → +998). */
+        currency?: string;
     };
     form: {
         id: string;
@@ -88,6 +90,8 @@ export interface SubmitResult {
     isClubGuest?: boolean;
     /** У номера уже есть аккаунт Loot Arena — для условия «новым в приложении». */
     isAppUser?: boolean;
+    /** Что стало с ранее выданным подарком этой формы: лежит, потрачен, сгорел или ждёт регистрации. */
+    prevGiftState?: 'active' | 'redeemed' | 'expired' | 'awaiting_reg' | '';
 }
 
 // Вызов публичного n8n webhook
@@ -133,6 +137,7 @@ export async function submitLead(data: LeadSubmission): Promise<SubmitResult> {
             duplicate: result?.duplicate,
             isClubGuest: !!(result?.isClubGuest ?? result?.is_club_guest),
             isAppUser: !!(result?.isAppUser ?? result?.is_app_user),
+            prevGiftState: (result?.prevGiftState || result?.prev_gift_state || '') as SubmitResult['prevGiftState'],
             submissionId: result?.submissionId || result?.id,
             error: result?.error,
             requireCaptcha: !!(result?.requireCaptcha ?? result?.require_captcha),

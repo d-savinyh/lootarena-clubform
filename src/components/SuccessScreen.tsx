@@ -17,6 +17,8 @@ interface SuccessScreenProps {
     isClubGuest?: boolean;
     /** У номера уже есть аккаунт Loot Arena (условие «новым в приложении»). */
     isAppUser?: boolean;
+    /** Что стало с ранее выданным подарком этой формы. */
+    prevGiftState?: 'active' | 'redeemed' | 'expired' | 'awaiting_reg' | '';
     onEvent?: (type: string, meta?: Record<string, any>) => void;
 }
 
@@ -71,7 +73,7 @@ const giftSummary = (gift: LeadGift): string => {
     return 'Подарок';
 };
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, giftReason, duplicate, isClubGuest, isAppUser, onEvent }) => {
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, giftReason, duplicate, isClubGuest, isAppUser, prevGiftState, onEvent }) => {
     const mapsUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
     // Подарок показываем, только если он реально положен этому гостю (inventory/reserved).
     // Если giftStatus='none' (форма без подарка ИЛИ гость не подходит под условие) — экран «Вы записаны».
@@ -176,18 +178,45 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                     </>
                 ) : alreadyGifted ? (
                     <>
-                        {/* Повторная заявка с того же номера. Про инвентарь НИЧЕГО не обещаем:
-                            первый подарок мог быть уже потрачен или сгореть по сроку — отправлять
-                            гостя «забирать» несуществующее хуже, чем не упоминать вовсе. */}
-                        <div className="text-center mb-10">
+                        {/* Повторная заявка с того же номера. Судьбу первого подарка называем
+                            ТОЧНО (сервер отдаёт prev_gift_state): «он в инвентаре» вслепую —
+                            обман, если гость его уже потратил или тот сгорел по сроку. */}
+                        <div className="text-center mb-8">
                             <h2 className="text-3xl font-black text-white mb-4">
                                 {repeatedNow ? 'Заявка уже принята!' : 'Заявка принята!'}
                             </h2>
                             <p className="text-lg text-white/45 leading-relaxed">
-                                Вы уже оставляли заявку по этой акции — подарок по ней выдаётся один раз на номер.
-                                Мы свяжемся с вами, ждём в <span className="text-white font-bold">{clubName}</span>!
+                                {prevGiftState === 'active' ? (
+                                    <>Подарок по этой акции уже начислен на ваш номер и лежит в инвентаре приложения <span className="text-white font-bold">Loot Arena</span>. Второй раз он не выдаётся.</>
+                                ) : prevGiftState === 'redeemed' ? (
+                                    <>Подарок по этой акции вы уже получили — он выдаётся один раз на номер. Ждём вас в <span className="text-white font-bold">{clubName}</span>!</>
+                                ) : prevGiftState === 'expired' ? (
+                                    <>Подарок по этой акции уже выдавался на ваш номер, но срок его действия истёк. Ждём вас в <span className="text-white font-bold">{clubName}</span>!</>
+                                ) : prevGiftState === 'awaiting_reg' ? (
+                                    <>Подарок уже закреплён за вашим номером — зарегистрируйтесь в приложении <span className="text-white font-bold">Loot Arena</span>, и он появится в инвентаре.</>
+                                ) : (
+                                    <>Вы уже оставляли заявку по этой акции — подарок по ней выдаётся один раз на номер.
+                                        Мы свяжемся с вами, ждём в <span className="text-white font-bold">{clubName}</span>!</>
+                                )}
                             </p>
                         </div>
+
+                        {/* В приложение отправляем только когда там правда что-то есть */}
+                        {(prevGiftState === 'active' || prevGiftState === 'awaiting_reg') && (
+                            <a
+                                href={appUrl || 'https://app.lootarena.ru'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => openExternal(e, appUrl || 'https://app.lootarena.ru', 'success_app_already', onEvent)}
+                                className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl text-black font-black text-base mb-3 transition-transform hover:scale-[1.02] active:scale-[0.97]"
+                                style={{ backgroundColor: brandColor }}
+                            >
+                                {prevGiftState === 'active' ? 'Открыть инвентарь' : 'Забрать в приложении'}
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                            </a>
+                        )}
                     </>
                 ) : notEligible ? (
                     <>
