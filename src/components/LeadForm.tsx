@@ -48,6 +48,15 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading, is
         onEvent?.('cta_click');
         const phoneDigits = phone.replace(/\D/g, '');
         if (phoneDigits.length < 11) { setError('Введите номер телефона'); return; }
+        // Маска принимает любую цифру после +7, поэтому опечатка в одну позицию давала
+        // «валидный» номер вроде +7 (798) 185-04-15 — система считала его НОВЫМ и бронировала
+        // подарок на телефон, которым гость не владеет (за всю историю 29 таких заявок).
+        // Российские мобильные — только 79XXXXXXXXX; клубов в других странах пока нет.
+        if (!/^79\d{9}$/.test(phoneDigits)) {
+            setError('Проверьте номер: мобильные России начинаются с +7 9…');
+            onEvent?.('submit_error', { error: 'phone_not_mobile' });
+            return;
+        }
         onEvent?.('phone_valid');
         await onSubmit({ name: '', phone: `+${phoneDigits}`, hp, formMs: Date.now() - mountedAt.current });
     };

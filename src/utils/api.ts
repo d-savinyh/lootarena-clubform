@@ -84,6 +84,10 @@ export interface SubmitResult {
     captchaKey?: string;
     /** Сколько секунд ждать после жёсткого лимита по IP. */
     retryAfter?: number;
+    /** Гость уже есть в базе клуба — для формы с условием «новым для клуба». */
+    isClubGuest?: boolean;
+    /** У номера уже есть аккаунт Loot Arena — для условия «новым в приложении». */
+    isAppUser?: boolean;
 }
 
 // Вызов публичного n8n webhook
@@ -127,6 +131,8 @@ export async function submitLead(data: LeadSubmission): Promise<SubmitResult> {
             giftReason: (result?.giftReason || result?.gift_reason) as GiftReason | undefined,
             eligible: result?.eligible,
             duplicate: result?.duplicate,
+            isClubGuest: !!(result?.isClubGuest ?? result?.is_club_guest),
+            isAppUser: !!(result?.isAppUser ?? result?.is_app_user),
             submissionId: result?.submissionId || result?.id,
             error: result?.error,
             requireCaptcha: !!(result?.requireCaptcha ?? result?.require_captcha),

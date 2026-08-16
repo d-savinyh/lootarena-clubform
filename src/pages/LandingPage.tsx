@@ -35,6 +35,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     const [submitted, setSubmitted] = useState(false);
     const [giftStatus, setGiftStatus] = useState<'inventory' | 'reserved' | 'none'>();
     const [giftReason, setGiftReason] = useState<GiftReason>();
+    // Признаки, объясняющие экран успеха: повтор в пределах 30 минут и то, под какое
+    // условие формы гость не подошёл (уже гость клуба / уже есть аккаунт).
+    const [submitMeta, setSubmitMeta] = useState<{ duplicate?: boolean; isClubGuest?: boolean; isAppUser?: boolean }>();
     // Ошибка ОТПРАВКИ (лимит, отказ капчи) — в отличие от `error` не подменяет собой весь лендинг,
     // а показывается под полем телефона: страница жива, гость может повторить.
     const [submitError, setSubmitError] = useState<string>();
@@ -175,6 +178,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
             if (result.ok) {
                 setGiftStatus(result.giftStatus ?? (landing.form.gift ? 'reserved' : 'none'));
                 setGiftReason(result.giftReason);
+                setSubmitMeta({ duplicate: result.duplicate, isClubGuest: result.isClubGuest, isAppUser: result.isAppUser });
                 setSubmitted(true);
                 setShowSuccess(true);
                 // Конверсия «лид» во все подключённые пиксели + поведенческое событие
@@ -352,6 +356,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         clubName={landing.club.name}
                         giftStatus={giftStatus}
                         giftReason={giftReason}
+                        duplicate={submitMeta?.duplicate}
+                        isClubGuest={submitMeta?.isClubGuest}
+                        isAppUser={submitMeta?.isAppUser}
                         gift={gift}
                         appUrl={buildAppUrl(submittedPhone)}
                         brandColor={brandColor}
@@ -439,6 +446,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                     clubName={landing.club.name}
                     giftStatus={giftStatus}
                     giftReason={giftReason}
+                    duplicate={submitMeta?.duplicate}
+                    isClubGuest={submitMeta?.isClubGuest}
+                    isAppUser={submitMeta?.isAppUser}
                     gift={gift}
                     appUrl={buildAppUrl(submittedPhone)}
                     brandColor={brandColor}

@@ -11,6 +11,12 @@ interface SuccessScreenProps {
     appUrl?: string;
     giftStatus?: GiftStatus;
     giftReason?: GiftReason;
+    /** Заявка уже была отправлена только что (дедуп 30 минут) — новой строки не создалось. */
+    duplicate?: boolean;
+    /** Гость уже числится в базе клуба (условие формы «новым для клуба»). */
+    isClubGuest?: boolean;
+    /** У номера уже есть аккаунт Loot Arena (условие «новым в приложении»). */
+    isAppUser?: boolean;
     onEvent?: (type: string, meta?: Record<string, any>) => void;
 }
 
@@ -65,7 +71,7 @@ const giftSummary = (gift: LeadGift): string => {
     return 'Подарок';
 };
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, giftReason, onEvent }) => {
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, giftReason, duplicate, isClubGuest, isAppUser, onEvent }) => {
     const mapsUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
     // Подарок показываем, только если он реально положен этому гостю (inventory/reserved).
     // Если giftStatus='none' (форма без подарка ИЛИ гость не подходит под условие) — экран «Вы записаны».
@@ -75,6 +81,12 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
     // не прошла, и отправляет её снова (до фикса это и создавало повторные выдачи),
     // поэтому прямо говорим, где искать первый подарок.
     const alreadyGifted = !showGift && giftReason === 'already_gifted';
+    // Гость не подошёл под условие формы («только новым»). Раньше он видел ровно тот же
+    // экран «Вы записаны!», что и человек без подарка вообще, и не понимал, сломалось
+    // что-то или так задумано — самая частая причина повторных отправок формы.
+    const notEligible = !showGift && giftReason === 'not_eligible' && !!gift;
+    // Повторная отправка в пределах 30 минут: заявка одна, подарок за неё уже решён.
+    const repeatedNow = !!duplicate;
 
     const overlay = (
         // Прокручиваемый оверлей: на невысоких экранах контент выше вьюпорта —
@@ -112,13 +124,17 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
 
                 {showGift ? (
                     <>
-                        {/* Заголовок зависит от того, выдан ли подарок сразу или забронирован */}
+                        {/* Заголовок зависит от того, выдан ли подарок сразу или забронирован.
+                            При повторной отправке в пределах 30 минут заявка НЕ создаётся заново —
+                            говорим об этом прямо, иначе экран выглядит как второй подарок. */}
                         <div className="text-center mb-8">
                             <h2 className="text-3xl font-black text-white mb-4">
-                                {inInventory ? 'Подарок уже в инвентаре!' : 'Подарок забронирован!'}
+                                {repeatedNow ? 'Заявка уже принята!' : inInventory ? 'Подарок уже в инвентаре!' : 'Подарок забронирован!'}
                             </h2>
                             <p className="text-lg text-white/45 leading-relaxed">
-                                {inInventory ? (
+                                {repeatedNow ? (
+                                    <>Вы отправили её только что — второй раз подарок не выдаётся. Он уже закреплён за вашим номером в приложении <span className="text-white font-bold">Loot Arena</span>.</>
+                                ) : inInventory ? (
                                     <>Открой приложение <span className="text-white font-bold">Loot Arena</span> — подарок уже лежит в твоём инвентаре.</>
                                 ) : (
                                     <>Забери его в приложении <span className="text-white font-bold">Loot Arena</span> — зарегистрируйся по своему номеру, и подарок уже будет ждать в инвентаре.</>
@@ -164,10 +180,34 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                             первый подарок мог быть уже потрачен или сгореть по сроку — отправлять
                             гостя «забирать» несуществующее хуже, чем не упоминать вовсе. */}
                         <div className="text-center mb-10">
-                            <h2 className="text-3xl font-black text-white mb-4">Заявка принята!</h2>
+                            <h2 className="text-3xl font-black text-white mb-4">
+                                {repeatedNow ? 'Заявка уже принята!' : 'Заявка принята!'}
+                            </h2>
                             <p className="text-lg text-white/45 leading-relaxed">
                                 Вы уже оставляли заявку по этой акции — подарок по ней выдаётся один раз на номер.
                                 Мы свяжемся с вами, ждём в <span className="text-white font-bold">{clubName}</span>!
+                            </p>
+                        </div>
+                    </>
+                ) : notEligible ? (
+                    <>
+                        {/* Гость не подошёл под условие формы. Причину называем конкретную:
+                            «подарок не пришёл» без объяснения выглядит как поломка. */}
+                        <div className="text-center mb-10">
+                            <h2 className="text-3xl font-black text-white mb-4">
+                                {repeatedNow ? 'Заявка уже принята!' : 'Заявка принята!'}
+                            </h2>
+                            <p className="text-lg text-white/45 leading-relaxed">
+                                {isClubGuest ? (
+                                    <>Этот подарок — для тех, кто ещё не был в клубе, а вы у нас уже играли.
+                                        Мы свяжемся с вами, ждём в <span className="text-white font-bold">{clubName}</span>!</>
+                                ) : isAppUser ? (
+                                    <>Этот подарок — для новых пользователей <span className="text-white font-bold">Loot Arena</span>,
+                                        а у вас уже есть аккаунт. Мы свяжемся с вами, ждём в клубе!</>
+                                ) : (
+                                    <>Этот подарок положен только новым гостям, поэтому за заявку он не начисляется.
+                                        Мы свяжемся с вами, ждём в <span className="text-white font-bold">{clubName}</span>!</>
+                                )}
                             </p>
                         </div>
                     </>
@@ -175,9 +215,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                     <>
                         {/* Записаны (форма без подарка ИЛИ гость не подходит под условие подарка) */}
                         <div className="text-center mb-10">
-                            <h2 className="text-3xl font-black text-white mb-4">Вы записаны!</h2>
+                            <h2 className="text-3xl font-black text-white mb-4">
+                                {repeatedNow ? 'Заявка уже принята!' : 'Вы записаны!'}
+                            </h2>
                             <p className="text-lg text-white/45 leading-relaxed">
-                                Мы свяжемся с вами в ближайшее время.<br />
+                                {repeatedNow
+                                    ? <>Вы отправили её только что — повторно ничего заполнять не нужно.<br /></>
+                                    : <>Мы свяжемся с вами в ближайшее время.<br /></>}
                                 Ждём вас в <span className="text-white font-bold">{clubName}</span>!
                             </p>
                         </div>
