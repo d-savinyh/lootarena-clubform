@@ -119,9 +119,13 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, onSubmit, isLoading, is
                 )}
             </button>
 
-            {/* Дисклеймер */}
+            {/* Дисклеймер. Упоминание SmartCaptcha обязательно: значок капчи мы прячем
+                (hideShield), а условия сервиса требуют уведомить о её использовании. */}
             <p className="text-[11px] text-white/15 text-center leading-relaxed px-6">
-                Нажимая кнопку, вы соглашаетесь на обработку персональных данных
+                Нажимая кнопку, вы соглашаетесь на обработку персональных данных.<br />
+                Форма защищена{' '}
+                <a href="https://yandex.ru/legal/smartcaptcha_termsofuse/" target="_blank" rel="noopener noreferrer"
+                    className="underline decoration-white/10 hover:text-white/30 transition-colors">Yandex SmartCaptcha</a>
             </p>
         </form>
     );
