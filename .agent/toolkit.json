@@ -8,10 +8,10 @@
     "toolkit_repo": "https://github.com/d-savinyh/agent-toolkit.git",
     "toolkit_local": "/tmp/agent-toolkit",
     "project": {
-        "name": "ERP LootArena",
+        "name": "Лид-формы LootArena",
         "n8n_url": "https://n8n.lootarena.ru",
         "deploy_webhook": "/webhook/devops/deploy-notification",
-        "dokploy_app_id": "3PXMjIVDYNJ59TlzEhI6Z",
+        "dokploy_app_id": "VICWfLBZT72JHLjTI_3R8",
         "dockerignore_exclude": []
     }
 }
