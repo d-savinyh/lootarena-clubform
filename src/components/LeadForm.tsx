@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getPhoneFormat, formatPhone as formatByCountry, phoneDigits, isValidPhone } from '../utils/phone';
+import { getPhoneFormat, applyMask, phoneDigits, isValidPhone } from '../utils/phone';
 
 interface LeadFormProps {
     brandColor: string;
@@ -29,13 +29,42 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, currency, onSubmit, isL
     // Момент показа формы. Сервер отбраковывает отправку быстрее 1.5 с — руками так не успеть.
     const mountedAt = React.useRef(Date.now());
 
+    const inputRef = React.useRef<HTMLInputElement>(null);
+    // Куда вернуть курсор после того, как маска перепишет значение. Без этого он прыгает
+    // в конец, и исправить цифру в середине номера невозможно — а одна лишняя цифра
+    // бронирует подарок на чужой телефон.
+    const caretRef = React.useRef<number | null>(null);
+
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setPhone(formatByCountry(e.target.value, fmt));
+        const el = e.target;
+        const next = applyMask(el.value, el.selectionStart ?? el.value.length, phone, fmt);
+
+        if (next.value === phone) {
+            // Значение не изменилось (лишняя цифра сверх маски, правка внутри кода страны) —
+            // перерисовки не будет, поэтому возвращаем поле в исходный вид сами.
+            el.value = next.value;
+            el.setSelectionRange(next.caret, next.caret);
+        } else {
+            caretRef.current = next.caret;
+            setPhone(next.value);
+        }
+
         if (error) setError('');
         if (!inputFired.current) { inputFired.current = true; onEvent?.('field_input', { field: 'phone' }); }
     };
 
-    const handlePhoneFocus = () => { if (!phone) setPhone(`+${fmt.code}`); onEvent?.('field_focus', { field: 'phone' }); };
+    React.useLayoutEffect(() => {
+        if (caretRef.current === null) return;
+        inputRef.current?.setSelectionRange(caretRef.current, caretRef.current);
+        caretRef.current = null;
+    }, [phone]);
+
+    const handlePhoneFocus = () => {
+        // Клик по пустому полю ставит курсор в позицию 0, и подставленный код страны
+        // оказывается ПРАВЕЕ курсора: первая цифра уезжала перед «+7» и номер перемешивался.
+        if (!phone) { setPhone(`+${fmt.code}`); caretRef.current = fmt.code.length + 1; }
+        onEvent?.('field_focus', { field: 'phone' });
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -69,8 +98,10 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, currency, onSubmit, isL
                 </p>
 
                 <input
+                    ref={inputRef}
                     type="tel"
                     inputMode="tel"
+                    autoComplete="tel"
                     placeholder={fmt.placeholder}
                     required
                     autoFocus

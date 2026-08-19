@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "check:phone": "node scripts/check-phone-mask.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
