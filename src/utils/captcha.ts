@@ -60,6 +60,9 @@ export async function solveCaptcha(sitekey: string): Promise<string | null> {
         const finish = (token: string | null) => {
             if (done) return;
             done = true;
+            // finish вызывается только после присваивания timer (из колбэка setTimeout
+            // или из render ниже), поэтому временной мёртвой зоны здесь нет.
+            // eslint-disable-next-line @typescript-eslint/no-use-before-define
             clearTimeout(timer);
             // destroy в try: виджет мог не успеть смонтироваться
             try { if (widgetId !== undefined) api.destroy(widgetId); } catch { /* noop */ }

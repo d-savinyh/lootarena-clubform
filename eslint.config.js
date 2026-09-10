@@ -19,5 +19,13 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Ловит чтение переменной в её собственном инициализаторе — в рантайме это
+      // ReferenceError по временной мёртвой зоне, а `tsc` внутри объектного литерала
+      // такую самоссылку не видит. Так в v0.6.0 едва не уехал белый экран на сетевой
+      // форме: `address: selectedClub.address || club.address` внутри `const club = ...`.
+      // functions: false — объявления функций поднимаются, там предупреждать не о чем.
+      '@typescript-eslint/no-use-before-define': ['error', { functions: false }],
+    },
   },
 ])
