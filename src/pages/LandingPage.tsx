@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import ClubHeader from '../components/ClubHeader';
+import ClubPicker from '../components/ClubPicker';
 import OfferCard from '../components/OfferCard';
 import LeadForm from '../components/LeadForm';
 import SuccessScreen from '../components/SuccessScreen';
-import { getLandingData, submitLead, trackView, trackEvent, injectPixels, fireLeadConversion, type ClubLanding, type GiftReason, type SubmitResult } from '../utils/api';
+import { getLandingData, submitLead, trackView, trackEvent, injectPixels, fireLeadConversion, type ClubLanding, type GiftReason, type SubmitResult, type LandingClub } from '../utils/api';
 import { solveCaptcha } from '../utils/captcha';
 
 interface LandingPageProps {
@@ -49,6 +50,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     const [submittedPhone, setSubmittedPhone] = useState<string>();
     const [variant, setVariant] = useState<string>();
     const [error, setError] = useState<string>();
+    // Сетевая форма: филиал выбирает ГОСТЬ, и до выбора мы не знаем ни адреса, ни маски
+    // телефона (валюта филиала), ни номинала подарка — поэтому выбор стоит ПЕРЕД контактами.
+    const [selectedClub, setSelectedClub] = useState<LandingClub | null>(null);
+    // Подсветка блока выбора, когда гость жмёт «Забрать», не выбрав филиал.
+    const [clubHighlight, setClubHighlight] = useState(false);
     const isDesktop = useIsDesktop();
 
     // UTM параметры из URL. Источник нормализуем к нижнему регистру, чтобы 2gis/2GIS не двоились в аналитике.
@@ -90,6 +96,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         setVariant(v);
                         try { localStorage.setItem(`cf_variant_${slug}`, v); } catch { /* игнор */ }
                     }
+                    // Набор из одного филиала выбирать не заставляем; выбор гостя переживает
+                    // перезагрузку страницы (иначе возврат «назад» стирает шаг и путает).
+                    const nc = data.form.clubs || null;
+                    if (data.form.isNetwork && nc && nc.length) {
+                        let restored: LandingClub | null = null;
+                        try {
+                            const saved = sessionStorage.getItem(`cf_club_${slug}`);
+                            restored = saved ? nc.find(c => c.id === saved) || null : null;
+                        } catch { /* нет sessionStorage */ }
+                        setSelectedClub(restored || (nc.length === 1 ? nc[0] : null));
+                    }
                     trackView(data.form.id, utm, v, rawUtm);
                     // Пиксели рекламных систем (по ID) + поведенческое событие просмотра
                     injectPixels(data.form.tracking);
@@ -129,8 +146,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [landing, variant, submitted]);
 
+    // Возврат к невыполненному требованию: подсветить блок и подскроллить к нему.
+    // Требование живёт выше по странице и на телефоне не видно.
+    const focusClubPicker = () => {
+        setClubHighlight(true);
+        try { document.getElementById('club-picker')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch { /* старый браузер */ }
+        window.setTimeout(() => setClubHighlight(false), 2200);
+    };
+
     const handleSubmit = async (formData: { name: string; phone: string; telegram?: string; hp?: string; formMs?: number }) => {
         if (!landing || isSubmitting) return;
+        if (landing.form.isNetwork && !selectedClub) { focusClubPicker(); return; }
         // Блок повторной отправки: заявка уже принята — просто показываем экран успеха, новую заявку не шлём
         if (submitted) {
             setShowSuccess(true);
@@ -145,6 +171,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
             const payload = {
                 form_id: landing.form.id,
                 club_id: '',
+                // Филиал сетевой формы — отдельным ключом: club_id остаётся служебным полем
+                // обёртки, доменное значение туда класть нельзя.
+                target_club_id: selectedClub?.id,
                 name: formData.name,
                 phone: formData.phone,
                 telegram: formData.telegram,
@@ -174,6 +203,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                 result = await submitLead({ ...payload, captcha_token: token });
             }
 
+            // Отказы сетевой формы объясняем словами и возвращаем к блоку выбора: «ошибка»
+            // без причины заставляет гостя жать кнопку снова.
+            if (!result.ok && (result.error === 'club_required' || result.error === 'club_not_in_form')) {
+                setSubmitError(result.error === 'club_required'
+                    ? 'Выберите клуб, в который придёте.'
+                    : 'Этот клуб больше не участвует в акции — выберите другой.');
+                if (result.error === 'club_not_in_form') setSelectedClub(null);
+                focusClubPicker();
+                trackEvent(landing.form.id, 'submit_error', { error: result.error }, { variant, utm });
+                return;
+            }
+
             if (!result.ok && result.error === 'too_many_requests') {
                 setSubmitError('Слишком много заявок с этого устройства. Попробуйте через 10 минут или позвоните в клуб.');
                 trackEvent(landing.form.id, 'submit_error', { error: 'too_many_requests' }, { variant, utm });
@@ -187,7 +228,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                 setSubmitted(true);
                 setShowSuccess(true);
                 // Конверсия «лид» во все подключённые пиксели + поведенческое событие
-                fireLeadConversion(landing.form.tracking, Number(landing.form.gift?.reward_meta?.bonus_amount) || undefined);
+                const paidGift = selectedClub?.gift ?? landing.form.gift;
+                fireLeadConversion(landing.form.tracking, Number(paidGift?.reward_meta?.bonus_amount) || undefined);
                 trackEvent(landing.form.id, 'submit_success', { giftStatus: result.giftStatus || 'none', giftReason: result.giftReason || '', duplicate: !!result.duplicate }, { variant, utm });
             } else {
                 setError(result.error || 'Произошла ошибка. Попробуйте ещё раз.');
@@ -231,12 +273,48 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
 
     if (!landing) return null;
 
+    // Сетевая форма: до выбора филиала в шапке стоит сеть (адрес/часы клуба-держателя
+    // гостю ничего не обещают), после выбора — данные ВЫБРАННОГО клуба, включая валюту
+    // (от неё зависит маска телефона) и его собственный номинал подарка.
+    const netClubs: LandingClub[] | null =
+        landing.form.isNetwork && landing.form.clubs && landing.form.clubs.length ? landing.form.clubs : null;
+    const club = netClubs && selectedClub
+        ? {
+            ...landing.club,
+            name: selectedClub.name,
+            address: selectedClub.address || landing.club.address,
+            workingHours: selectedClub.workingHours || landing.club.workingHours,
+            currency: selectedClub.currency || landing.club.currency,
+        }
+        : landing.club;
+    const needClub = !!netClubs && !selectedClub;
+
     const brandColor = landing.form.brandColor || '#30D158';
     const clean = (v?: string) => v && v !== 'none' ? v : undefined;
     const track = (type: string, meta: Record<string, any> = {}) => trackEvent(landing.form.id, type, meta, { variant, utm });
+    const handleSelectClub = (c: LandingClub) => {
+        setSelectedClub(c);
+        setClubHighlight(false);
+        setSubmitError(undefined);
+        try { sessionStorage.setItem(`cf_club_${slug}`, c.id); } catch { /* нет sessionStorage */ }
+        // Событие даёт воронку «показ → выбор филиала → заявка»: показы у сетевой формы
+        // общие, и распределение спроса по филиалам видно только отсюда.
+        track('club_selected', { club_id: c.id });
+    };
+    const clubPicker = netClubs && netClubs.length > 1 ? (
+        <ClubPicker
+            clubs={netClubs}
+            selectedId={selectedClub?.id ?? null}
+            onSelect={handleSelectClub}
+            brandColor={brandColor}
+            highlight={clubHighlight}
+            isDesktop={isDesktop}
+            onEvent={track}
+        />
+    ) : null;
     const ctaText = clean(landing.form.ctaText || undefined);
     const socialRow = (() => {
-        const s = landing.club.socialLinks || {};
+        const s = club.socialLinks || {};
         const items = ([
             s.vk ? { label: 'ВКонтакте', url: s.vk } : null,
             s.telegram ? { label: 'Telegram', url: s.telegram.startsWith('http') ? s.telegram : `https://t.me/${s.telegram.replace(/^@/, '')}` } : null,
@@ -254,8 +332,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
         );
     })();
 
-    const gift = landing.form.gift || null;
-    const coverUrl = landing.form.coverImage || landing.club.coverUrl;
+    const gift = (selectedClub ? (selectedClub.gift ?? landing.form.gift) : landing.form.gift) || null;
+    const coverUrl = landing.form.coverImage || club.coverUrl;
     const buildAppUrl = (phone?: string) => {
         const p = new URLSearchParams();
         if (phone) p.set('phone', phone);
@@ -267,6 +345,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
         return `https://app.lootarena.ru/?${p.toString()}`;
     };
 
+    // Номинал подарка у филиалов бывает РАЗНЫЙ (410/520/560 ₽ у Убежища 78). До выбора
+    // филиала конкретную сумму не показываем: это обещание, которое может не сбыться.
+    const giftVaries = !!netClubs && new Set(netClubs.map(c => c.gift?.reward_text || '')).size > 1;
+    const giftUnknown = giftVaries && !selectedClub;
     const giftCard = gift ? (
         <div className="glass rounded-2xl p-4 flex items-center gap-3 animate-fade-in">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0" style={{ backgroundColor: `${brandColor}18` }}>
@@ -275,8 +357,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
             <div className="min-w-0">
                 <div className="text-[11px] uppercase tracking-wider text-white/35 font-semibold mb-0.5">Подарок за регистрацию</div>
                 <div className="text-base font-black text-white truncate">
-                    {gift.reward_text || (gift.reward_meta?.bonus_amount ? `${gift.reward_meta.bonus_amount} бонусов` : 'Подарок')}
+                    {giftUnknown
+                        ? 'Зависит от клуба'
+                        : (gift.reward_text || (gift.reward_meta?.bonus_amount ? `${gift.reward_meta.bonus_amount} бонусов` : 'Подарок'))}
                 </div>
+                {giftUnknown && <div className="text-[12px] text-white/30 mt-0.5">Выберите клуб — покажем ваш подарок</div>}
             </div>
         </div>
     ) : null;
@@ -291,11 +376,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                     {/* ── Левая колонка: Hero + обложка ── */}
                     <div className="desktop-left">
                         <ClubHeader
-                            clubName={landing.club.name}
-                            clubLogo={landing.club.avatarUrl}
+                            clubName={club.name}
+                            clubLogo={club.avatarUrl}
                             coverUrl={coverUrl}
-                            address={landing.club.address}
-                            workingHours={landing.club.workingHours}
+                            address={club.address}
+                            workingHours={club.workingHours}
                             brandColor={brandColor}
                             isDesktopHero
                         />
@@ -322,18 +407,25 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                                 isDesktop
                             />
 
+                            {/* Выбор филиала — ДО контактов: от него зависят адрес, маска
+                                телефона и номинал подарка */}
+                            {clubPicker}
+
                             {giftCard}
 
                             {/* Форма */}
                             <LeadForm
                                 brandColor={brandColor}
-                                clubAddress={landing.club.address}
-                                currency={landing.club.currency}
+                                clubAddress={club.address}
+                                currency={club.currency}
                                 onSubmit={handleSubmit}
                                 isLoading={isSubmitting}
                                 ctaText={ctaText}
                                 onEvent={track}
                                 submitError={submitError}
+                                blocked={needClub}
+                                blockReason={needClub ? 'Сначала выберите клуб' : undefined}
+                                onBlocked={focusClubPicker}
                                 isDesktop
                             />
 
@@ -359,7 +451,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                 {/* Экран успеха */}
                 {showSuccess && (
                     <SuccessScreen
-                        clubName={landing.club.name}
+                        clubName={club.name}
                         giftStatus={giftStatus}
                         giftReason={giftReason}
                         duplicate={submitMeta?.duplicate}
@@ -369,7 +461,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         gift={gift}
                         appUrl={buildAppUrl(submittedPhone)}
                         brandColor={brandColor}
-                        address={landing.club.address}
+                        address={club.address}
                         onClose={() => setShowSuccess(false)}
                         onEvent={track}
                     />
@@ -398,11 +490,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                     <div className="w-full max-w-md space-y-6">
                         {/* Шапка клуба */}
                         <ClubHeader
-                            clubName={landing.club.name}
-                            clubLogo={landing.club.avatarUrl}
+                            clubName={club.name}
+                            clubLogo={club.avatarUrl}
                             coverUrl={coverUrl}
-                            address={landing.club.address}
-                            workingHours={landing.club.workingHours}
+                            address={club.address}
+                            workingHours={club.workingHours}
                             brandColor={brandColor}
                         />
 
@@ -415,18 +507,24 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                             brandColor={brandColor}
                         />
 
+                        {/* Выбор филиала — ДО контактов */}
+                        {clubPicker}
+
                         {giftCard}
 
                         {/* Форма */}
                         <LeadForm
                             brandColor={brandColor}
-                            clubAddress={landing.club.address}
-                            currency={landing.club.currency}
+                            clubAddress={club.address}
+                            currency={club.currency}
                             onSubmit={handleSubmit}
                             isLoading={isSubmitting}
                             ctaText={ctaText}
                             onEvent={track}
                             submitError={submitError}
+                            blocked={needClub}
+                            blockReason={needClub ? 'Сначала выберите клуб' : undefined}
+                            onBlocked={focusClubPicker}
                         />
 
                         {/* Ошибка */}
@@ -451,7 +549,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
             {/* Экран успеха */}
             {showSuccess && (
                 <SuccessScreen
-                    clubName={landing.club.name}
+                    clubName={club.name}
                     giftStatus={giftStatus}
                     giftReason={giftReason}
                     duplicate={submitMeta?.duplicate}
@@ -461,7 +559,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                     gift={gift}
                     appUrl={buildAppUrl(submittedPhone)}
                     brandColor={brandColor}
-                    address={landing.club.address}
+                    address={club.address}
                     onClose={() => setShowSuccess(false)}
                     onEvent={track}
                 />

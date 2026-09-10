@@ -32,7 +32,25 @@ export interface ClubLanding {
         coverImage?: string | null;
         ctaText?: string | null;
         tracking?: { metrika?: string; vk_pixel?: string; top_mail?: string; meta?: string; gtag?: string } | null;
+        /** Сетевая форма: одна ссылка на несколько филиалов, филиал выбирает гость. */
+        isNetwork?: boolean;
+        clubs?: LandingClub[] | null;
     };
+}
+
+/** Филиал сетевой формы: гость выбирает, КУДА придёт, до ввода контактов. */
+export interface LandingClub {
+    id: string;
+    name: string;
+    city?: string;
+    address?: string;
+    workingHours?: string;
+    lat?: number | null;
+    lng?: number | null;
+    /** Валюта филиала — от неё зависит маска телефона (сеть может быть в двух странах). */
+    currency?: string;
+    /** Подарок ИМЕННО этого филиала: номинал у филиалов разный (410/520/560 ₽ у Убежища 78). */
+    gift?: LeadGift | null;
 }
 
 export interface LeadGift {
@@ -46,6 +64,9 @@ export interface LeadGift {
 export interface LeadSubmission {
     form_id: string;
     club_id: string;
+    /** Филиал, выбранный гостем в сетевой форме. Отдельный ключ: club_id — служебное поле
+     *  обёртки, доменное значение в него класть нельзя (перетрёт скоуп). */
+    target_club_id?: string;
     name: string;
     phone: string;
     telegram?: string;
@@ -71,6 +92,9 @@ export type GiftStatus = 'inventory' | 'reserved' | 'none';
 // подарок с этой формы уже получали; not_eligible — гость не подходит под условие формы
 // (новым в Loot Arena / новым для клуба); no_gift — в форме подарок не настроен.
 export type GiftReason = 'granted' | 'already_gifted' | 'not_eligible' | 'no_gift' | 'duplicate';
+
+/** Отказы сетевой формы: филиал не выбран / выбранный филиал уже не в наборе формы. */
+export type NetworkError = 'club_required' | 'club_not_in_form';
 
 export interface SubmitResult {
     ok: boolean;

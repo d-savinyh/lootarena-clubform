@@ -16,9 +16,15 @@ interface LeadFormProps {
     isDesktop?: boolean;
     /** Внешняя ошибка отправки (лимит запросов, отказ капчи) — показывается под полем */
     submitError?: string;
+    /** Отправка невозможна, пока не выполнено требование выше по странице (выбор филиала).
+     *  Кнопку при этом НЕ гасим: `disabled` без объяснения читается как «сломалось»,
+     *  а требование на телефоне не видно — оно выше по скроллу. */
+    blocked?: boolean;
+    blockReason?: string;
+    onBlocked?: () => void;
 }
 
-const LeadForm: React.FC<LeadFormProps> = ({ brandColor, currency, onSubmit, isLoading, isDesktop, ctaText, onEvent, submitError }) => {
+const LeadForm: React.FC<LeadFormProps> = ({ brandColor, currency, onSubmit, isLoading, isDesktop, ctaText, onEvent, submitError, blocked, blockReason, onBlocked }) => {
     const fmt = getPhoneFormat(currency);
     const [phone, setPhone] = useState('');
     const [error, setError] = useState('');
@@ -69,6 +75,8 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, currency, onSubmit, isL
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         onEvent?.('cta_click');
+        // Гард обязателен даже при «живой» кнопке: она кликается, просто ведёт к требованию.
+        if (blocked) { onEvent?.('submit_blocked', { reason: 'club_required' }); onBlocked?.(); return; }
         const digits = phoneDigits(phone, fmt);
         if (digits.length < fmt.total) { setError('Введите номер телефона'); return; }
         // Маска принимала любую цифру после кода страны, поэтому опечатка в одну позицию
@@ -129,11 +137,16 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, currency, onSubmit, isL
             </div>
 
             {/* CTA-кнопка */}
+            {blocked && blockReason && (
+                <p className="text-[13px] text-center font-medium -mb-1" style={{ color: brandColor }}>{blockReason}</p>
+            )}
+
             <button
                 type="submit"
                 disabled={isLoading}
+                aria-disabled={blocked || undefined}
                 className={`w-full rounded-2xl font-bold text-black btn-apple disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none ${isDesktop ? 'py-[18px] text-[17px]' : 'py-4 text-base'
-                    }`}
+                    } ${blocked ? 'opacity-50' : ''}`}
                 style={{
                     backgroundColor: brandColor,
                     boxShadow: `0 0 24px ${brandColor}30, 0 0 60px ${brandColor}10`,
