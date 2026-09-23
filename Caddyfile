@@ -1,0 +1,72 @@
+# Раздача собранного Vite-SPA на проде (Dokploy + Nixpacks + Caddy).
+# Шаблон agent-toolkit: configs/react/Caddyfile. Разбор и порядок внедрения — SPA-HARDENING.md.
+#
+# Зачем свой файл. Nixpacks для статики кладёт шаблон Railway, где `try_files {path} /index.html`
+# стоит на ВСЕ пути и нет ни одного Cache-Control. Отсюда два отказа, оба — «пустой экран»:
+#  1) удалённый очередным релизом чанк (`/assets/index-ZBeAU8GP.js`) отдаётся не 404, а index.html
+#     с кодом 200 — браузер получает HTML там, где ждал JavaScript, и падает с
+#     `Unexpected token '<'` / «'text/html' is not a valid JavaScript MIME type»;
+#  2) index.html без Cache-Control браузер кэширует эвристически (по Last-Modified) и после релиза
+#     продолжает просить чанки прошлой сборки.
+# ERP LootArena 13.08.2026: 163 мёртвых чанка, 4 669 обращений у 215 разных IP за сутки — «перестал
+# работать вход» у админов клубов, и так на каждом релизе.
+#
+# Подключение: `nixpacks.toml` с `[start] cmd = "caddy run --config Caddyfile --adapter caddyfile"`
+# (шаблон рядом). Caddy при этом берётся тот, что Nixpacks и так ставит для статики, — добавлять
+# caddy в nixPkgs НЕ надо (конфликт nix-профиля).
+{
+	admin off
+	persist_config off
+	auto_https off
+	log {
+		format json
+	}
+	servers {
+		# Traefik — внутри docker-сети и tailnet: доверяем его X-Forwarded-For.
+		trusted_proxies static private_ranges 100.0.0.0/8
+	}
+}
+
+:{$PORT:3000} {
+	log {
+		format json
+	}
+
+	# Nixpacks стартует из /app, поэтому относительный путь указывает на /app/dist.
+	root * {$NIXPACKS_SPA_OUTPUT_DIR:dist}
+	encode gzip
+
+	# Health-check Dokploy: иначе он попадает в SPA-фоллбэк и получает index.html.
+	handle /health {
+		respond "ok" 200
+	}
+
+	# 1) Файлы сборки: хеш содержимого в имени, поэтому кэш навсегда.
+	#    Здесь НЕТ try_files намеренно: отсутствующий чанк обязан отдать 404, а не index.html.
+	#    `immutable` вешаем только на существующий файл: иначе браузер запомнил бы «навсегда» и сам
+	#    404, и при откате релиза вернувшийся чанк остался бы для него мёртвым.
+	handle /assets/* {
+		@exists file
+		header @exists Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# 2) Всё остальное — обычный SPA-роутинг.
+	handle {
+		# Картинки и шрифты без хеша в имени меняются редко — сутки кэша.
+		@static path *.png *.jpg *.jpeg *.gif *.svg *.webp *.ico *.woff *.woff2 *.ttf *.mp4
+		header @static Cache-Control "public, max-age=86400"
+
+		# Всё прочее — точки входа (index.html, version.json, манифест, /diag.html) И любой
+		# SPA-маршрут: они обязаны ревалидироваться на каждом открытии.
+		# Матчер именно «не статика», а НЕ список путей: `header` отрабатывает ДО `try_files`,
+		# поэтому на момент проверки путь ещё `/schedule`, а не переписанный `/index.html`, —
+		# список вида `path / /index.html *.html` молча пропускает все разделы (так было в
+		# DETIAI ERP до 23.09.2026: `/schedule`, `/clients` уходили без Cache-Control).
+		@nocache not path *.png *.jpg *.jpeg *.gif *.svg *.webp *.ico *.woff *.woff2 *.ttf *.mp4
+		header @nocache Cache-Control "no-cache"
+
+		try_files {path} /index.html
+		file_server
+	}
+}

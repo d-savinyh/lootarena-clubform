@@ -1,0 +1,8 @@
+# Прод собирается Nixpacks'ом (Dokploy, buildType=nixpacks). Для статики Nixpacks сам ставит caddy
+# и запускает его со СВОИМ шаблоном (try_files на все пути, ни одного Cache-Control) — здесь мы лишь
+# переопределяем запуск, чтобы тот же caddy взял наш ./Caddyfile. Разбор — SPA-HARDENING.md.
+#
+# ⚠️ caddy в nixPkgs НЕ добавлять: Nixpacks уже тянет свой, дубль даёт конфликт nix-профиля
+# («conflict for .../bin/caddy»). Если в проекте уже есть nixpacks.toml — добавь только [start].
+[start]
+cmd = "caddy run --config Caddyfile --adapter caddyfile"
