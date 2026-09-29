@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import type { LeadGift, GiftStatus, GiftReason } from '../utils/api';
+import type { LeadGift, GiftStatus, GiftReason, IneligibleBy, PrevGiftState } from '../utils/api';
 
 interface SuccessScreenProps {
     clubName: string;
@@ -13,12 +13,12 @@ interface SuccessScreenProps {
     giftReason?: GiftReason;
     /** Заявка уже была отправлена только что (дедуп 30 минут) — новой строки не создалось. */
     duplicate?: boolean;
-    /** Гость уже числится в базе клуба (условие формы «новым для клуба»). */
-    isClubGuest?: boolean;
-    /** У номера уже есть аккаунт Loot Arena (условие «новым в приложении»). */
-    isAppUser?: boolean;
-    /** Что стало с ранее выданным подарком этой формы. */
-    prevGiftState?: 'active' | 'redeemed' | 'expired' | 'awaiting_reg' | '';
+    /** Подарок прошлой заявки этой формы ещё не забран (лежит в инвентаре или ждёт регистрации). */
+    prevGiftState?: PrevGiftState;
+    /** Правило формы, под которое гость не подошёл: «новым для клуба» / «новым в приложении» / «новым для сети». */
+    ineligibleBy?: IneligibleBy;
+    /** Сколько миссий клуба открыто в Loot Arena прямо сейчас (0 — не знаем или нет). */
+    clubPromoCount?: number;
     onEvent?: (type: string, meta?: Record<string, any>) => void;
 }
 
@@ -64,6 +64,36 @@ const openExternal = (
     window.location.assign(url);
 };
 
+const APP_STORE_URL = 'https://apps.apple.com/app/id6778439237';
+const GOOGLE_PLAY_URL = 'https://play.google.com/store/apps/details?id=ru.lootarena.app';
+
+/**
+ * Магазин приложений по устройству гостя — сразу, без промежуточной страницы.
+ *
+ * Страницу lootarena.ru/links целиком не даём: там же вход через Telegram и MAX, а такие
+ * аккаунты создаются БЕЗ телефона (за 60 дней до 29.09.2026 — 674 штуки, номер у 0).
+ * Подарок лид-формы и инвентарь привязаны к номеру, так что в таком аккаунте гость не
+ * найдёт ни того, ни другого и решит, что его обманули. Приложения iOS/Android входят по
+ * номеру. На компьютере и в клубном шелле (WebView2 на Windows) магазина нет — только веб.
+ */
+const detectStore = (): { url: string; label: string; where: string } | null => {
+    if (typeof navigator === 'undefined') return null;
+    const ua = navigator.userAgent || '';
+    // iPadOS 13+ представляется маком — выдаёт его только тач.
+    const isIOS = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+    if (isIOS) return { url: APP_STORE_URL, label: 'App Store', where: 'success_store_ios' };
+    if (/Android/i.test(ua)) return { url: GOOGLE_PLAY_URL, label: 'Google Play', where: 'success_store_android' };
+    return null;
+};
+
+const plural = (n: number, one: string, few: string, many: string): string => {
+    const m10 = n % 10;
+    const m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return one;
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+    return many;
+};
+
 const giftSummary = (gift: LeadGift): string => {
     const t = gift.reward_text?.trim();
     if (t) return t;
@@ -73,22 +103,59 @@ const giftSummary = (gift: LeadGift): string => {
     return 'Подарок';
 };
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, giftReason, duplicate, isClubGuest, isAppUser, prevGiftState, onEvent }) => {
+const secondaryBtn = 'flex items-center justify-center gap-2 w-full py-4 rounded-2xl glass-light text-white/60 hover:text-white hover:bg-white/8 active:bg-white/12 active:scale-[0.98] transition-all text-sm font-bold';
+
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, giftReason, duplicate, prevGiftState, ineligibleBy, clubPromoCount, onEvent }) => {
     const mapsUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
-    // Подарок показываем, только если он реально положен этому гостю (inventory/reserved).
-    // Если giftStatus='none' (форма без подарка ИЛИ гость не подходит под условие) — экран «Вы записаны».
+    const app = appUrl || 'https://app.lootarena.ru';
+    const store = detectStore();
+
+    // Подарок показываем, только если он реально положен этому гостю.
+    // «Уже в инвентаре» и «ждёт регистрации» НЕ различаем: разница выдаёт, есть ли у номера
+    // аккаунт, а номер в форме может быть чужим. «Зайдите по номеру» верно для обоих.
     const showGift = !!gift && giftStatus !== 'none';
-    const inInventory = giftStatus === 'inventory';
-    // Подарок по этому номеру уже получен раньше. Без объяснения гость думает, что заявка
-    // не прошла, и отправляет её снова (до фикса это и создавало повторные выдачи),
-    // поэтому прямо говорим, где искать первый подарок.
-    const alreadyGifted = !showGift && giftReason === 'already_gifted';
-    // Гость не подошёл под условие формы («только новым»). Раньше он видел ровно тот же
-    // экран «Вы записаны!», что и человек без подарка вообще, и не понимал, сломалось
-    // что-то или так задумано — самая частая причина повторных отправок формы.
-    const notEligible = !showGift && giftReason === 'not_eligible' && !!gift;
     // Повторная отправка в пределах 30 минут: заявка одна, подарок за неё уже решён.
     const repeatedNow = !!duplicate;
+    // Подарок ПРОШЛОЙ заявки этой формы ещё не забран. Бьёт любую причину отказа: гостю,
+    // который с первой заявки успел поиграть в клубе, форма отвечала «вы у нас уже играли»,
+    // хотя подарок лежал в его инвентаре (фидбек Cyber X 29.09; за 60 дней таких 616 из
+    // 2 732 заявок без подарка). Говорим только «не забран» — без суммы и без содержимого.
+    const unclaimed = !showGift && prevGiftState === 'unclaimed';
+    // Подарок по номеру уже выдавался. Судьбу (потрачен / сгорел) не называем: это факт о
+    // человеке, а не о заявке. Без объяснения гость решит, что заявка не прошла, и отправит снова.
+    const alreadyGifted = !showGift && !unclaimed && giftReason === 'already_gifted';
+    // Гость не подошёл под условие формы. Причину называем по ПРАВИЛУ формы.
+    const notEligible = !showGift && !unclaimed && giftReason === 'not_eligible' && !!gift;
+
+    const primary = showGift
+        ? { label: 'Забрать в Loot Arena', where: 'success_app' }
+        : unclaimed
+            ? { label: 'Забрать подарок', where: 'success_app_unclaimed' }
+            : { label: 'Открыть Loot Arena', where: 'success_app_nogift' };
+
+    // Без подарка гость всё равно получает дорогу в приложение (просьба клуба): миссии клуба
+    // — факт о КЛУБЕ, называть можно; про его инвентарь — только «загляните».
+    const promoCount = Math.max(0, clubPromoCount || 0);
+    const promoCard = (
+        <div className="glass rounded-[24px] p-5 mb-5 flex items-start gap-4 text-left">
+            <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0"
+                style={{ backgroundColor: `${brandColor}18` }}
+            >
+                🎮
+            </div>
+            <div className="min-w-0">
+                <div className="text-base font-black text-white leading-snug">
+                    {promoCount > 0
+                        ? <>В Loot Arena у клуба {promoCount} {plural(promoCount, 'миссия', 'миссии', 'миссий')} с наградами</>
+                        : <>Loot Arena — награды за игру в клубах</>}
+                </div>
+                <div className="text-sm text-white/45 mt-1 leading-relaxed">
+                    Зайдите по номеру из заявки. Уже пользуетесь приложением? Загляните в инвентарь — награды клубов лежат там.
+                </div>
+            </div>
+        </div>
+    );
 
     const overlay = (
         // Прокручиваемый оверлей: на невысоких экранах контент выше вьюпорта —
@@ -102,7 +169,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                 />
 
                 <div className="relative max-w-md w-full animate-scale-in">
-                {/* Иконка успеха */}
+                {/* Иконка */}
                 <div className="flex justify-center mb-8">
                     <div className="relative">
                         <div
@@ -111,6 +178,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                         >
                             {showGift ? (
                                 <span>{gift!.reward_icon || '🎁'}</span>
+                            ) : unclaimed ? (
+                                <span>🎁</span>
                             ) : (
                                 <svg className="w-14 h-14" style={{ color: brandColor }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -126,20 +195,17 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
 
                 {showGift ? (
                     <>
-                        {/* Заголовок зависит от того, выдан ли подарок сразу или забронирован.
-                            При повторной отправке в пределах 30 минут заявка НЕ создаётся заново —
+                        {/* При повторной отправке в пределах 30 минут заявка НЕ создаётся заново —
                             говорим об этом прямо, иначе экран выглядит как второй подарок. */}
                         <div className="text-center mb-8">
                             <h2 className="text-3xl font-black text-white mb-4">
-                                {repeatedNow ? 'Заявка уже принята!' : inInventory ? 'Подарок уже в инвентаре!' : 'Подарок забронирован!'}
+                                {repeatedNow ? 'Заявка уже принята!' : 'Подарок ваш!'}
                             </h2>
                             <p className="text-lg text-white/45 leading-relaxed">
                                 {repeatedNow ? (
-                                    <>Вы отправили её только что — второй раз подарок не выдаётся. Он уже закреплён за вашим номером в приложении <span className="text-white font-bold">Loot Arena</span>.</>
-                                ) : inInventory ? (
-                                    <>Открой приложение <span className="text-white font-bold">Loot Arena</span> — подарок уже лежит в твоём инвентаре.</>
+                                    <>Вы отправили её только что — второй раз подарок не выдаётся. Он уже закреплён за вашим номером в <span className="text-white font-bold">Loot Arena</span>.</>
                                 ) : (
-                                    <>Забери его в приложении <span className="text-white font-bold">Loot Arena</span> — зарегистрируйся по своему номеру, и подарок уже будет ждать в инвентаре.</>
+                                    <>Зайдите в <span className="text-white font-bold">Loot Arena</span> по номеру из заявки — подарок будет ждать в инвентаре.</>
                                 )}
                             </p>
                         </div>
@@ -159,91 +225,61 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                                 )}
                             </div>
                         </div>
-
-                        {/* Кнопка — в приложение. href оставлен для семантики и ПКМ «копировать адрес»,
-                            но реальное открытие идёт через openExternal (см. коммент к хелперу). */}
-                        <a
-                            href={appUrl || 'https://app.lootarena.ru'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => openExternal(e, appUrl || 'https://app.lootarena.ru', 'success_app', onEvent)}
-                            className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl text-black font-black text-base mb-3 transition-transform hover:scale-[1.02] active:scale-[0.97]"
-                            style={{ backgroundColor: brandColor }}
-                        >
-                            {inInventory ? 'Открыть приложение' : 'Забрать в приложении'}
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                            </svg>
-                        </a>
+                    </>
+                ) : unclaimed ? (
+                    <>
+                        {/* Подарок прошлой заявки ждёт гостя: лежит в инвентаре или материализуется
+                            при регистрации по номеру (у брони нет срока до регистрации). */}
+                        <div className="text-center mb-8">
+                            <h2 className="text-3xl font-black text-white mb-4">
+                                {repeatedNow ? 'Заявка уже принята!' : 'Подарок уже ждёт вас!'}
+                            </h2>
+                            <p className="text-lg text-white/45 leading-relaxed">
+                                Вы уже оставляли заявку по этой акции, и подарок за неё ещё не забран. Второй раз он не начисляется —
+                                зайдите в <span className="text-white font-bold">Loot Arena</span> по номеру из заявки и заберите первый.
+                            </p>
+                        </div>
                     </>
                 ) : alreadyGifted ? (
                     <>
-                        {/* Повторная заявка с того же номера. Судьбу первого подарка называем
-                            ТОЧНО (сервер отдаёт prev_gift_state): «он в инвентаре» вслепую —
-                            обман, если гость его уже потратил или тот сгорел по сроку. */}
-                        <div className="text-center mb-8">
+                        <div className="text-center mb-6">
                             <h2 className="text-3xl font-black text-white mb-4">
                                 {repeatedNow ? 'Заявка уже принята!' : 'Заявка принята!'}
                             </h2>
                             <p className="text-lg text-white/45 leading-relaxed">
-                                {prevGiftState === 'active' ? (
-                                    <>Подарок по этой акции уже начислен на ваш номер и лежит в инвентаре приложения <span className="text-white font-bold">Loot Arena</span>. Второй раз он не выдаётся.</>
-                                ) : prevGiftState === 'redeemed' ? (
-                                    <>Подарок по этой акции вы уже получили — он выдаётся один раз на номер. Ждём вас в <span className="text-white font-bold">{clubName}</span>!</>
-                                ) : prevGiftState === 'expired' ? (
-                                    <>Подарок по этой акции уже выдавался на ваш номер, но срок его действия истёк. Ждём вас в <span className="text-white font-bold">{clubName}</span>!</>
-                                ) : prevGiftState === 'awaiting_reg' ? (
-                                    <>Подарок уже закреплён за вашим номером — зарегистрируйтесь в приложении <span className="text-white font-bold">Loot Arena</span>, и он появится в инвентаре.</>
-                                ) : (
-                                    <>Вы уже оставляли заявку по этой акции — подарок по ней выдаётся один раз на номер.
-                                        Мы свяжемся с вами, ждём в <span className="text-white font-bold">{clubName}</span>!</>
-                                )}
+                                Подарок по этой акции выдаётся один раз на номер, и на ваш номер он уже начислялся.
+                                Ждём вас в <span className="text-white font-bold">{clubName}</span>!
                             </p>
                         </div>
-
-                        {/* В приложение отправляем только когда там правда что-то есть */}
-                        {(prevGiftState === 'active' || prevGiftState === 'awaiting_reg') && (
-                            <a
-                                href={appUrl || 'https://app.lootarena.ru'}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => openExternal(e, appUrl || 'https://app.lootarena.ru', 'success_app_already', onEvent)}
-                                className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl text-black font-black text-base mb-3 transition-transform hover:scale-[1.02] active:scale-[0.97]"
-                                style={{ backgroundColor: brandColor }}
-                            >
-                                {prevGiftState === 'active' ? 'Открыть инвентарь' : 'Забрать в приложении'}
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                </svg>
-                            </a>
-                        )}
+                        {promoCard}
                     </>
                 ) : notEligible ? (
                     <>
-                        {/* Гость не подошёл под условие формы. Причину называем конкретную:
-                            «подарок не пришёл» без объяснения выглядит как поломка. */}
-                        <div className="text-center mb-10">
+                        <div className="text-center mb-6">
                             <h2 className="text-3xl font-black text-white mb-4">
                                 {repeatedNow ? 'Заявка уже принята!' : 'Заявка принята!'}
                             </h2>
                             <p className="text-lg text-white/45 leading-relaxed">
-                                {isClubGuest ? (
-                                    <>Этот подарок — для тех, кто ещё не был в клубе, а вы у нас уже играли.
+                                {ineligibleBy === 'new_club' ? (
+                                    <>Этот подарок — для тех, кто ещё не был в <span className="text-white font-bold">{clubName}</span>, поэтому за эту заявку он не начисляется. Мы свяжемся с вами!</>
+                                ) : ineligibleBy === 'new_network' ? (
+                                    <>Этот подарок — для тех, кто ещё не был в клубах сети, поэтому за эту заявку он не начисляется.
                                         Мы свяжемся с вами, ждём в <span className="text-white font-bold">{clubName}</span>!</>
-                                ) : isAppUser ? (
-                                    <>Этот подарок — для новых пользователей <span className="text-white font-bold">Loot Arena</span>,
-                                        а у вас уже есть аккаунт. Мы свяжемся с вами, ждём в клубе!</>
+                                ) : ineligibleBy === 'new_app' ? (
+                                    <>Этот подарок — для новых пользователей <span className="text-white font-bold">Loot Arena</span>, поэтому за эту заявку он не начисляется.
+                                        Мы свяжемся с вами, ждём в клубе!</>
                                 ) : (
-                                    <>Этот подарок положен только новым гостям, поэтому за заявку он не начисляется.
+                                    <>Этот подарок положен только новым гостям, поэтому за эту заявку он не начисляется.
                                         Мы свяжемся с вами, ждём в <span className="text-white font-bold">{clubName}</span>!</>
                                 )}
                             </p>
                         </div>
+                        {promoCard}
                     </>
                 ) : (
                     <>
-                        {/* Записаны (форма без подарка ИЛИ гость не подходит под условие подарка) */}
-                        <div className="text-center mb-10">
+                        {/* Записаны (форма без подарка) */}
+                        <div className="text-center mb-6">
                             <h2 className="text-3xl font-black text-white mb-4">
                                 {repeatedNow ? 'Заявка уже принята!' : 'Вы записаны!'}
                             </h2>
@@ -254,23 +290,63 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                                 Ждём вас в <span className="text-white font-bold">{clubName}</span>!
                             </p>
                         </div>
+                        {promoCard}
                     </>
                 )}
 
-                {/* Маршрут */}
+                {/* В приложение — веб-версия с уже подставленным номером: до 21.08.2026, пока номер
+                    не подставлялся, треть гостей с забронированным подарком отваливалась до SMS.
+                    href оставлен для семантики и ПКМ «копировать адрес», открытие — через openExternal. */}
                 <a
-                    href={mapsUrl}
+                    href={app}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={(e) => openExternal(e, mapsUrl, 'success_maps', onEvent)}
-                    className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl glass-light text-white/60 hover:text-white hover:bg-white/8 active:bg-white/12 active:scale-[0.98] transition-all text-sm font-bold mb-3"
+                    onClick={(e) => openExternal(e, app, primary.where, onEvent)}
+                    className="flex items-center justify-center gap-2.5 w-full py-4 rounded-2xl text-black font-black text-base mb-3 transition-transform hover:scale-[1.02] active:scale-[0.97]"
+                    style={{ backgroundColor: brandColor }}
                 >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    {primary.label}
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
-                    Построить маршрут
                 </a>
+
+                {/* Магазин приложений (только на телефоне) + маршрут */}
+                <div className={store ? 'grid grid-cols-2 gap-3 mb-3' : 'mb-3'}>
+                    {store && (
+                        <a
+                            href={store.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => openExternal(e, store.url, store.where, onEvent)}
+                            className={secondaryBtn}
+                        >
+                            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            {store.label}
+                        </a>
+                    )}
+                    <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => openExternal(e, mapsUrl, 'success_maps', onEvent)}
+                        className={secondaryBtn}
+                    >
+                        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        {store ? 'Маршрут' : 'Построить маршрут'}
+                    </a>
+                </div>
+                {store && (
+                    // Подарок и инвентарь привязаны к номеру: вход по другому номеру — пустой аккаунт.
+                    <p className="text-xs text-white/30 text-center mb-2">
+                        Приложение Loot Arena — входите по номеру из заявки
+                    </p>
+                )}
 
                     {/* Назад */}
                     {onClose && (

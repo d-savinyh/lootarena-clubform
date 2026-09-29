@@ -86,12 +86,33 @@ export interface LeadSubmission {
     click_ids?: Record<string, string>;
 }
 
-export type GiftStatus = 'inventory' | 'reserved' | 'none';
+// inventory/reserved — старый ответ сервера: «уже в инвентаре» против «ждёт регистрации»
+// выдавало, есть ли у номера аккаунт. Новый ответ сворачивает оба в granted, а экран
+// успеха их и не различает — текст одинаково верен для обоих.
+export type GiftStatus = 'granted' | 'inventory' | 'reserved' | 'none';
 
 // Почему подарка нет: granted — выдан/забронирован; already_gifted — по этому номеру
 // подарок с этой формы уже получали; not_eligible — гость не подходит под условие формы
 // (новым в Loot Arena / новым для клуба); no_gift — в форме подарок не настроен.
 export type GiftReason = 'granted' | 'already_gifted' | 'not_eligible' | 'no_gift' | 'duplicate';
+
+/** Правило ФОРМЫ, под которое гость не подошёл. Свойство формы, а не гостя. */
+export type IneligibleBy = 'new_app' | 'new_club' | 'new_network' | '';
+
+/** Подарок прошлой заявки этой формы ещё не забран: лежит в инвентаре или ждёт регистрации. */
+export type PrevGiftState = 'unclaimed' | '';
+
+// Ответ формы публичный, а номер в ней никто не подтверждает — ввести можно и чужой.
+// Поэтому о ЧЕЛОВЕКЕ наружу идёт только одно: «подарок по прошлой заявке не забран»
+// (решение владельца 29.09.2026 — полезно, а суммы и содержимого не раскрывает).
+// «Потратил», «сгорел», «уже играл в клубе», «есть аккаунт» — не показываем, даже если
+// старый ответ сервера их ещё присылает. Подробности гость увидит в приложении после
+// входа по SMS. → .agent/rules/public-data-exposure.md
+const toPrevGiftState = (raw: unknown): PrevGiftState =>
+    raw === 'unclaimed' || raw === 'active' || raw === 'awaiting_reg' ? 'unclaimed' : '';
+
+const toIneligibleBy = (raw: unknown): IneligibleBy =>
+    raw === 'new_app' || raw === 'new_club' || raw === 'new_network' ? raw : '';
 
 /** Отказы сетевой формы: филиал не выбран / выбранный филиал уже не в наборе формы. */
 export type NetworkError = 'club_required' | 'club_not_in_form';
@@ -100,7 +121,6 @@ export interface SubmitResult {
     ok: boolean;
     giftStatus?: GiftStatus;
     giftReason?: GiftReason;
-    eligible?: boolean;
     duplicate?: boolean;
     submissionId?: string;
     error?: string;
@@ -110,12 +130,12 @@ export interface SubmitResult {
     captchaKey?: string;
     /** Сколько секунд ждать после жёсткого лимита по IP. */
     retryAfter?: number;
-    /** Гость уже есть в базе клуба — для формы с условием «новым для клуба». */
-    isClubGuest?: boolean;
-    /** У номера уже есть аккаунт Loot Arena — для условия «новым в приложении». */
-    isAppUser?: boolean;
-    /** Что стало с ранее выданным подарком этой формы: лежит, потрачен, сгорел или ждёт регистрации. */
-    prevGiftState?: 'active' | 'redeemed' | 'expired' | 'awaiting_reg' | '';
+    /** Подарок прошлой заявки этой формы ещё не забран. */
+    prevGiftState?: PrevGiftState;
+    /** Под какое правило формы гость не подошёл (только при giftReason = not_eligible). */
+    ineligibleBy?: IneligibleBy;
+    /** Сколько миссий клуба открыто в Loot Arena прямо сейчас — факт о клубе, не о госте. */
+    clubPromoCount?: number;
 }
 
 // Вызов публичного n8n webhook
@@ -157,11 +177,10 @@ export async function submitLead(data: LeadSubmission): Promise<SubmitResult> {
             ok: result?.ok ?? true,
             giftStatus: (result?.giftStatus || result?.gift_status) as GiftStatus | undefined,
             giftReason: (result?.giftReason || result?.gift_reason) as GiftReason | undefined,
-            eligible: result?.eligible,
             duplicate: result?.duplicate,
-            isClubGuest: !!(result?.isClubGuest ?? result?.is_club_guest),
-            isAppUser: !!(result?.isAppUser ?? result?.is_app_user),
-            prevGiftState: (result?.prevGiftState || result?.prev_gift_state || '') as SubmitResult['prevGiftState'],
+            prevGiftState: toPrevGiftState(result?.prevGiftState ?? result?.prev_gift_state),
+            ineligibleBy: toIneligibleBy(result?.ineligibleBy ?? result?.ineligible_by),
+            clubPromoCount: Math.max(0, Number(result?.clubPromoCount ?? result?.club_promo_count) || 0),
             submissionId: result?.submissionId || result?.id,
             error: result?.error,
             requireCaptcha: !!(result?.requireCaptcha ?? result?.require_captcha),

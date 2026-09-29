@@ -4,7 +4,7 @@ import ClubPicker from '../components/ClubPicker';
 import OfferCard from '../components/OfferCard';
 import LeadForm from '../components/LeadForm';
 import SuccessScreen from '../components/SuccessScreen';
-import { getLandingData, submitLead, trackView, trackEvent, injectPixels, fireLeadConversion, type ClubLanding, type GiftReason, type SubmitResult, type LandingClub } from '../utils/api';
+import { getLandingData, submitLead, trackView, trackEvent, injectPixels, fireLeadConversion, type ClubLanding, type GiftReason, type GiftStatus, type SubmitResult, type LandingClub } from '../utils/api';
 import { solveCaptcha } from '../utils/captcha';
 
 interface LandingPageProps {
@@ -34,15 +34,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [submitted, setSubmitted] = useState(false);
-    const [giftStatus, setGiftStatus] = useState<'inventory' | 'reserved' | 'none'>();
+    const [giftStatus, setGiftStatus] = useState<GiftStatus>();
     const [giftReason, setGiftReason] = useState<GiftReason>();
-    // Признаки, объясняющие экран успеха: повтор в пределах 30 минут и то, под какое
-    // условие формы гость не подошёл (уже гость клуба / уже есть аккаунт).
+    // Признаки, объясняющие экран успеха: повтор в пределах 30 минут, незабранный подарок
+    // прошлой заявки, правило формы, под которое гость не подошёл, и миссии клуба в приложении.
     const [submitMeta, setSubmitMeta] = useState<{
         duplicate?: boolean;
-        isClubGuest?: boolean;
-        isAppUser?: boolean;
         prevGiftState?: SubmitResult['prevGiftState'];
+        ineligibleBy?: SubmitResult['ineligibleBy'];
+        clubPromoCount?: number;
     }>();
     // Ошибка ОТПРАВКИ (лимит, отказ капчи) — в отличие от `error` не подменяет собой весь лендинг,
     // а показывается под полем телефона: страница жива, гость может повторить.
@@ -224,7 +224,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
             if (result.ok) {
                 setGiftStatus(result.giftStatus ?? (landing.form.gift ? 'reserved' : 'none'));
                 setGiftReason(result.giftReason);
-                setSubmitMeta({ duplicate: result.duplicate, isClubGuest: result.isClubGuest, isAppUser: result.isAppUser, prevGiftState: result.prevGiftState });
+                setSubmitMeta({ duplicate: result.duplicate, prevGiftState: result.prevGiftState, ineligibleBy: result.ineligibleBy, clubPromoCount: result.clubPromoCount });
                 setSubmitted(true);
                 setShowSuccess(true);
                 // Конверсия «лид» во все подключённые пиксели + поведенческое событие
@@ -455,9 +455,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         giftStatus={giftStatus}
                         giftReason={giftReason}
                         duplicate={submitMeta?.duplicate}
-                        isClubGuest={submitMeta?.isClubGuest}
-                        isAppUser={submitMeta?.isAppUser}
                         prevGiftState={submitMeta?.prevGiftState}
+                        ineligibleBy={submitMeta?.ineligibleBy}
+                        clubPromoCount={submitMeta?.clubPromoCount}
                         gift={gift}
                         appUrl={buildAppUrl(submittedPhone)}
                         brandColor={brandColor}
@@ -553,9 +553,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                     giftStatus={giftStatus}
                     giftReason={giftReason}
                     duplicate={submitMeta?.duplicate}
-                    isClubGuest={submitMeta?.isClubGuest}
-                    isAppUser={submitMeta?.isAppUser}
                     prevGiftState={submitMeta?.prevGiftState}
+                    ineligibleBy={submitMeta?.ineligibleBy}
+                    clubPromoCount={submitMeta?.clubPromoCount}
                     gift={gift}
                     appUrl={buildAppUrl(submittedPhone)}
                     brandColor={brandColor}
