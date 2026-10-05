@@ -103,6 +103,26 @@ const giftSummary = (gift: LeadGift): string => {
     return 'Подарок';
 };
 
+/**
+ * Отложенная активация (ЕРП, 05.10.2026): клуб может открыть подарок лид-формы не сразу, а через
+ * N часов после заявки — ключ `activate_after_hours` в `gift.reward_meta`. Подарок при этом
+ * ложится в инвентарь сразу (с замком), и экран обязан сказать, когда его можно будет забрать.
+ */
+const giftDelayHours = (gift: LeadGift | null | undefined): number => {
+    const h = Number(gift?.reward_meta?.activate_after_hours);
+    return Number.isFinite(h) && h > 0 ? Math.round(h) : 0;
+};
+
+/** «3 дня» · «12 часов» · «1 день 6 часов». */
+const formatDelay = (hours: number): string => {
+    const days = Math.floor(hours / 24);
+    const rest = hours % 24;
+    return [
+        days > 0 ? `${days} ${plural(days, 'день', 'дня', 'дней')}` : '',
+        rest > 0 ? `${rest} ${plural(rest, 'час', 'часа', 'часов')}` : '',
+    ].filter(Boolean).join(' ');
+};
+
 const secondaryBtn = 'flex items-center justify-center gap-2 w-full py-4 rounded-2xl glass-light text-white/60 hover:text-white hover:bg-white/8 active:bg-white/12 active:scale-[0.98] transition-all text-sm font-bold';
 
 const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, giftReason, duplicate, prevGiftState, ineligibleBy, clubPromoCount, onEvent }) => {
@@ -114,6 +134,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
     // «Уже в инвентаре» и «ждёт регистрации» НЕ различаем: разница выдаёт, есть ли у номера
     // аккаунт, а номер в форме может быть чужим. «Зайдите по номеру» верно для обоих.
     const showGift = !!gift && giftStatus !== 'none';
+    const delayHours = giftDelayHours(gift);
     // Повторная отправка в пределах 30 минут: заявка одна, подарок за неё уже решён.
     const repeatedNow = !!duplicate;
     // Подарок ПРОШЛОЙ заявки этой формы ещё не забран. Бьёт любую причину отказа: гостю,
@@ -128,7 +149,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
     const notEligible = !showGift && !unclaimed && giftReason === 'not_eligible' && !!gift;
 
     const primary = showGift
-        ? { label: 'Забрать в Loot Arena', where: 'success_app' }
+        // Подарок с задержкой ещё нельзя забрать — кнопка ведёт посмотреть его, а не «забрать».
+        ? { label: delayHours > 0 ? 'Открыть Loot Arena' : 'Забрать в Loot Arena', where: 'success_app' }
         : unclaimed
             ? { label: 'Забрать подарок', where: 'success_app_unclaimed' }
             : { label: 'Открыть Loot Arena', where: 'success_app_nogift' };
@@ -209,7 +231,11 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                                 {repeatedNow ? (
                                     <>Вы отправили её только что — второй раз подарок не выдаётся. Он уже закреплён за вашим номером в <span className="text-white font-bold">Loot Arena</span>.</>
                                 ) : (
-                                    <>Зайдите в <span className="text-white font-bold">Loot Arena</span> по номеру из заявки — подарок будет ждать в инвентаре.</>
+                                    delayHours > 0 ? (
+                                        <>Зайдите в <span className="text-white font-bold">Loot Arena</span> по номеру из заявки — подарок уже будет в инвентаре, а забрать его можно через <span className="text-white font-bold">{formatDelay(delayHours)}</span> после заявки.</>
+                                    ) : (
+                                        <>Зайдите в <span className="text-white font-bold">Loot Arena</span> по номеру из заявки — подарок будет ждать в инвентаре.</>
+                                    )
                                 )}
                             </p>
                         </div>
@@ -224,8 +250,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                             </div>
                             <div className="min-w-0">
                                 <div className="text-lg font-black text-white truncate">{giftSummary(gift!)}</div>
+                                {delayHours > 0 && (
+                                    <div className="text-xs font-bold mt-0.5" style={{ color: brandColor }}>🔒 Откроется через {formatDelay(delayHours)}</div>
+                                )}
                                 {gift!.expires_in_days && (
-                                    <div className="text-xs text-white/35 mt-0.5">Действует {gift!.expires_in_days} дн. после получения</div>
+                                    <div className="text-xs text-white/35 mt-0.5">
+                                        Действует {gift!.expires_in_days} дн. {delayHours > 0 ? 'после открытия' : 'после получения'}
+                                    </div>
                                 )}
                             </div>
                         </div>

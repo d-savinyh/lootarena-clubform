@@ -13,6 +13,7 @@ type Scenario = Omit<React.ComponentProps<typeof SuccessScreen>, 'clubName' | 'b
 
 const SCENARIOS: Record<string, Scenario> = {
     granted: { gift: GIFT, giftStatus: 'granted', giftReason: 'granted' },
+    granted_delayed: { gift: { ...GIFT, reward_meta: { bonus_amount: 777, activate_after_hours: 72 } }, giftStatus: 'granted', giftReason: 'granted' },
     granted_repeat: { gift: GIFT, giftStatus: 'granted', giftReason: 'duplicate', duplicate: true },
     unclaimed: { gift: GIFT, giftStatus: 'none', giftReason: 'not_eligible', prevGiftState: 'unclaimed', ineligibleBy: 'new_club', clubPromoCount: 27 },
     already_gifted: { gift: GIFT, giftStatus: 'none', giftReason: 'already_gifted', clubPromoCount: 27 },
