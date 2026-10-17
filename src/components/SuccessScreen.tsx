@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import type { LeadGift, GiftStatus, GiftReason, IneligibleBy, PrevGiftState } from '../utils/api';
+import { HEALTH_WARNING_TEXT } from '../utils/ageGate';
 
 interface SuccessScreenProps {
     clubName: string;
@@ -19,6 +20,8 @@ interface SuccessScreenProps {
     ineligibleBy?: IneligibleBy;
     /** Сколько миссий клуба открыто в Loot Arena прямо сейчас (0 — не знаем или нет). */
     clubPromoCount?: number;
+    /** Форма с энергетиком: под карточкой подарка — надпись о вреде (ageGate.healthWarning). */
+    healthWarning?: boolean;
     onEvent?: (type: string, meta?: Record<string, any>) => void;
 }
 
@@ -125,7 +128,7 @@ const formatDelay = (hours: number): string => {
 
 const secondaryBtn = 'flex items-center justify-center gap-2 w-full py-4 rounded-2xl glass-light text-white/60 hover:text-white hover:bg-white/8 active:bg-white/12 active:scale-[0.98] transition-all text-sm font-bold';
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, giftReason, duplicate, prevGiftState, ineligibleBy, clubPromoCount, onEvent }) => {
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, giftReason, duplicate, prevGiftState, ineligibleBy, clubPromoCount, healthWarning, onEvent }) => {
     const mapsUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
     const app = appUrl || 'https://app.lootarena.ru';
     const store = detectStore();
@@ -260,6 +263,13 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                                 )}
                             </div>
                         </div>
+                        {/* Подробности уже показанной рекламы: надпись обычного размера, без подгонки под 7% —
+                            по правилу 7% она стоит в карточке предложения (как окно миссии в приложении). */}
+                        {healthWarning && (
+                            <p lang="ru" className="text-[13px] leading-snug text-white/60 text-left -mt-2 mb-5 px-1" style={{ hyphens: 'auto', WebkitHyphens: 'auto' }}>
+                                {HEALTH_WARNING_TEXT}
+                            </p>
+                        )}
                     </>
                 ) : unclaimed ? (
                     <>

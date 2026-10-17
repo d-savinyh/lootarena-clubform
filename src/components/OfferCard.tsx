@@ -1,4 +1,5 @@
 import React from 'react';
+import HealthWarning from './HealthWarning';
 
 interface OfferCardProps {
     title: string;
@@ -8,9 +9,13 @@ interface OfferCardProps {
     brandColor: string;
     /** Десктопный стиль — крупная типографика */
     isDesktop?: boolean;
+    /** В акции энергетик: надпись о вреде на 7,5% площади рекламы (ageGate.healthWarning). */
+    healthWarning?: boolean;
+    /** Пересчитать кегль надписи, когда меняется реклама (выбран другой филиал — другой подарок). */
+    warningFitKey?: string;
 }
 
-const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge, brandColor, isDesktop }) => {
+const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge, brandColor, isDesktop, healthWarning, warningFitKey }) => {
     return (
         <div className="relative animate-slide-up-delay-1">
             {/* Фоновый glow */}
@@ -19,8 +24,8 @@ const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge,
                 style={{ backgroundColor: brandColor }}
             />
 
-            {/* Карточка */}
-            <div className={`relative glass rounded-[28px] overflow-hidden ${isDesktop ? 'p-8' : 'p-6'}`}>
+            {/* Карточка. data-ad-area — площадь рекламы для надписи о вреде энергетиков (HealthWarning). */}
+            <div data-ad-area="offer" className={`relative glass rounded-[28px] overflow-hidden ${isDesktop ? 'p-8' : 'p-6'}`}>
                 {/* Декоративный градиент */}
                 <div
                     className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-8"
@@ -28,15 +33,17 @@ const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge,
                 />
 
                 <div className="relative">
-                    {/* Бейдж */}
+                    {/* Бейдж. Пометок «18+» и «0%» нет по решению 15.10.2026 (specs/content-policy.md) */}
                     {badge && (
-                        <div className="inline-flex items-center gap-1.5 mb-5">
-                            <span
-                                className="px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider text-black"
-                                style={{ backgroundColor: brandColor }}
-                            >
-                                {badge}
-                            </span>
+                        <div className="flex flex-wrap items-center gap-1.5 mb-5">
+                            {badge && (
+                                <span
+                                    className="px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider text-black"
+                                    style={{ backgroundColor: brandColor }}
+                                >
+                                    {badge}
+                                </span>
+                            )}
                         </div>
                     )}
 
@@ -78,6 +85,9 @@ const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge,
                             <span className="text-xs text-white/25 leading-relaxed">{terms}</span>
                         </div>
                     )}
+
+                    {/* Надпись о вреде энергетиков — в самой карточке, кегль по замеру площади */}
+                    {healthWarning && <HealthWarning fitKey={warningFitKey} />}
                 </div>
             </div>
         </div>
