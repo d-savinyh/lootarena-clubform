@@ -22,8 +22,6 @@ interface SuccessScreenProps {
     clubPromoCount?: number;
     /** Форма с энергетиком: под карточкой подарка — надпись о вреде (ageGate.healthWarning). */
     healthWarning?: boolean;
-    /** Форма с безалкогольным пивом: «0%» у подарка (ageGate.nonalcMark). */
-    nonalcMark?: boolean;
     onEvent?: (type: string, meta?: Record<string, any>) => void;
 }
 
@@ -130,7 +128,7 @@ const formatDelay = (hours: number): string => {
 
 const secondaryBtn = 'flex items-center justify-center gap-2 w-full py-4 rounded-2xl glass-light text-white/60 hover:text-white hover:bg-white/8 active:bg-white/12 active:scale-[0.98] transition-all text-sm font-bold';
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, giftReason, duplicate, prevGiftState, ineligibleBy, clubPromoCount, healthWarning, nonalcMark, onEvent }) => {
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, giftReason, duplicate, prevGiftState, ineligibleBy, clubPromoCount, healthWarning, onEvent }) => {
     const mapsUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
     const app = appUrl || 'https://app.lootarena.ru';
     const store = detectStore();
@@ -255,10 +253,6 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                             </div>
                             <div className="min-w-0">
                                 <div className="text-lg font-black text-white truncate">{giftSummary(gift!)}</div>
-                                {/* «0%» — отдельной строкой: рядом с названием она съедала его на узком экране */}
-                                {nonalcMark && (
-                                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[11px] font-bold text-white border border-white/30" aria-label="Безалкогольное пиво, 0% алкоголя">0%</span>
-                                )}
                                 {delayHours > 0 && (
                                     <div className="text-xs font-bold mt-0.5" style={{ color: brandColor }}>🔒 Откроется через {formatDelay(delayHours)}</div>
                                 )}

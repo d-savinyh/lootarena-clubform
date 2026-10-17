@@ -458,7 +458,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                                 brandColor={brandColor}
                                 isDesktop
                                 healthWarning={!!ageGate?.healthWarning}
-                                nonalcMark={!!ageGate?.nonalcMark}
                                 warningFitKey={warningFitKey}
                             />
 
@@ -518,7 +517,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         brandColor={brandColor}
                         address={club.address}
                         healthWarning={!!ageGate?.healthWarning}
-                        nonalcMark={!!ageGate?.nonalcMark}
                         onClose={() => setShowSuccess(false)}
                         onEvent={track}
                     />
@@ -563,7 +561,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                             badge={clean(landing.form.offerBadge)}
                             brandColor={brandColor}
                             healthWarning={!!ageGate?.healthWarning}
-                            nonalcMark={!!ageGate?.nonalcMark}
                             warningFitKey={warningFitKey}
                         />
 
@@ -621,7 +618,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                     brandColor={brandColor}
                     address={club.address}
                     healthWarning={!!ageGate?.healthWarning}
-                    nonalcMark={!!ageGate?.nonalcMark}
                     onClose={() => setShowSuccess(false)}
                     onEvent={track}
                 />

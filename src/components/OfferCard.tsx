@@ -11,13 +11,11 @@ interface OfferCardProps {
     isDesktop?: boolean;
     /** В акции энергетик: надпись о вреде на 7,5% площади рекламы (ageGate.healthWarning). */
     healthWarning?: boolean;
-    /** В акции безалкогольное пиво: пометка «0%» (ageGate.nonalcMark). */
-    nonalcMark?: boolean;
     /** Пересчитать кегль надписи, когда меняется реклама (выбран другой филиал — другой подарок). */
     warningFitKey?: string;
 }
 
-const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge, brandColor, isDesktop, healthWarning, nonalcMark, warningFitKey }) => {
+const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge, brandColor, isDesktop, healthWarning, warningFitKey }) => {
     return (
         <div className="relative animate-slide-up-delay-1">
             {/* Фоновый glow */}
@@ -35,8 +33,8 @@ const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge,
                 />
 
                 <div className="relative">
-                    {/* Бейдж и пометка «0%» у безалкогольного пива */}
-                    {(badge || nonalcMark) && (
+                    {/* Бейдж. Пометок «18+» и «0%» нет по решению 15.10.2026 (specs/content-policy.md) */}
+                    {badge && (
                         <div className="flex flex-wrap items-center gap-1.5 mb-5">
                             {badge && (
                                 <span
@@ -44,16 +42,6 @@ const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge,
                                     style={{ backgroundColor: brandColor }}
                                 >
                                     {badge}
-                                </span>
-                            )}
-                            {nonalcMark && (
-                                <span
-                                    className="px-3 py-1.5 rounded-full text-xs font-bold text-white border border-white/30"
-                                    title="Безалкогольное пиво, 0% алкоголя"
-                                    aria-label="Безалкогольное пиво, 0% алкоголя"
-                                    data-nonalc-mark
-                                >
-                                    0%
                                 </span>
                             )}
                         </div>
