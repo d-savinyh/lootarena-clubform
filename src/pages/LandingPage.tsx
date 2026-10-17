@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ClubHeader from '../components/ClubHeader';
 import ClubPicker from '../components/ClubPicker';
 import OfferCard from '../components/OfferCard';
 import LeadForm from '../components/LeadForm';
 import SuccessScreen from '../components/SuccessScreen';
+import AgeGateScreen from '../components/AgeGateScreen';
 import { getLandingData, submitLead, trackView, trackEvent, injectPixels, fireLeadConversion, type ClubLanding, type GiftReason, type GiftStatus, type SubmitResult, type LandingClub } from '../utils/api';
 import { solveCaptcha } from '../utils/captcha';
+import { readConfirmedAge, writeConfirmedAge } from '../utils/ageGate';
 
 interface LandingPageProps {
     slug: string;
@@ -55,6 +57,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     const [selectedClub, setSelectedClub] = useState<LandingClub | null>(null);
     // Подсветка блока выбора, когда гость жмёт «Забрать», не выбрав филиал.
     const [clubHighlight, setClubHighlight] = useState(false);
+    // Форма с энергетиком или безалкогольным пивом: до ответа «Да» показываем только вопрос о возрасте.
+    // Подтверждённый возраст живёт до закрытия вкладки (src/utils/ageGate.ts).
+    const [confirmedAge, setConfirmedAge] = useState(() => readConfirmedAge());
+    const [ageDeclined, setAgeDeclined] = useState(false);
+    const ageGateShownRef = useRef(false);
     const isDesktop = useIsDesktop();
 
     // UTM параметры из URL. Источник нормализуем к нижнему регистру, чтобы 2gis/2GIS не двоились в аналитике.
@@ -111,8 +118,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                     // Пиксели рекламных систем (по ID) + поведенческое событие просмотра
                     injectPixels(data.form.tracking);
                     trackEvent(data.form.id, 'page_view', {}, { variant: v, utm });
-                    // Обновляем title страницы
-                    document.title = `${data.club.name} — ${data.form.offerTitle}`;
+                    // Заголовок вкладки ставит эффект ниже: до ответа о возрасте в нём нет текста акции.
                 } else {
                     setError('Страница не найдена');
                 }
@@ -124,6 +130,24 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
         };
         load();
     }, [slug]);
+
+    // Вопрос о возрасте открыт, пока подтверждённый возраст меньше нужного форме.
+    const ageGate = landing?.form.ageGate || null;
+    const ageLocked = !!ageGate && confirmedAge < ageGate.minAge;
+
+    // Заголовок вкладки: до ответа «Да» — только клуб (в названии акции может быть энергетик).
+    useEffect(() => {
+        if (!landing) return;
+        document.title = ageLocked ? landing.club.name : `${landing.club.name} — ${landing.form.offerTitle}`;
+    }, [landing, ageLocked]);
+
+    // Воронка вопроса о возрасте: показ — один раз за загрузку страницы.
+    useEffect(() => {
+        if (!landing || !ageLocked || ageGateShownRef.current) return;
+        ageGateShownRef.current = true;
+        trackEvent(landing.form.id, 'age_gate_shown', { min_age: landing.form.ageGate?.minAge ?? 18 }, { variant, utm });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [landing, ageLocked]);
 
     // Поведенческие события: глубина скролла (25/50/75/100) + уход со страницы (abandon через sendBeacon).
     useEffect(() => {
@@ -187,6 +211,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                 raw_utm: Object.keys(rawUtm).length ? rawUtm : undefined,
                 variant,
                 click_ids: Object.keys(clickIds).length ? clickIds : undefined,
+                // Форма 18+: сюда доходят только после ответа «Да» на вопрос о возрасте.
+                age_confirmed: landing.form.ageGate ? true : undefined,
             };
 
             let result = await submitLead(payload);
@@ -292,6 +318,29 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     const brandColor = landing.form.brandColor || '#30D158';
     const clean = (v?: string) => v && v !== 'none' ? v : undefined;
     const track = (type: string, meta: Record<string, any> = {}) => trackEvent(landing.form.id, type, meta, { variant, utm });
+
+    // ── Вопрос о возрасте (форма с энергетиком или безалкогольным пивом) ──
+    // Предложение, подарок и форма до ответа «Да» не рендерятся вовсе. «Нет» — текст без формы.
+    if (ageGate && ageLocked) {
+        return (
+            <AgeGateScreen
+                clubName={landing.club.name}
+                clubLogo={landing.club.avatarUrl}
+                gate={ageGate}
+                brandColor={brandColor}
+                declined={ageDeclined}
+                onConfirm={() => {
+                    writeConfirmedAge(ageGate.minAge);
+                    setConfirmedAge(Math.max(confirmedAge, ageGate.minAge));
+                    track('age_gate_confirm', { min_age: ageGate.minAge });
+                }}
+                onDecline={() => {
+                    setAgeDeclined(true);
+                    track('age_gate_decline', { min_age: ageGate.minAge });
+                }}
+            />
+        );
+    }
     const handleSelectClub = (c: LandingClub) => {
         setSelectedClub(c);
         setClubHighlight(false);
@@ -349,8 +398,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     // филиала конкретную сумму не показываем: это обещание, которое может не сбыться.
     const giftVaries = !!netClubs && new Set(netClubs.map(c => c.gift?.reward_text || '')).size > 1;
     const giftUnknown = giftVaries && !selectedClub;
+    // Меняется подарок (выбрали филиал) — меняется площадь рекламы: надпись о вреде подгоняется заново.
+    const warningFitKey = `${selectedClub?.id || ''}|${giftUnknown ? '' : gift?.reward_text || ''}`;
     const giftCard = gift ? (
-        <div className="glass rounded-2xl p-4 flex items-center gap-3 animate-fade-in">
+        // data-ad-area: карточка подарка — часть рекламы, по ней считается площадь надписи о вреде энергетиков.
+        <div data-ad-area="gift" className="glass rounded-2xl p-4 flex items-center gap-3 animate-fade-in">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0" style={{ backgroundColor: `${brandColor}18` }}>
                 {gift.reward_icon || '🎁'}
             </div>
@@ -405,6 +457,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                                 badge={clean(landing.form.offerBadge)}
                                 brandColor={brandColor}
                                 isDesktop
+                                healthWarning={!!ageGate?.healthWarning}
+                                nonalcMark={!!ageGate?.nonalcMark}
+                                warningFitKey={warningFitKey}
                             />
 
                             {/* Выбор филиала — ДО контактов: от него зависят адрес, маска
@@ -462,6 +517,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         appUrl={buildAppUrl(submittedPhone)}
                         brandColor={brandColor}
                         address={club.address}
+                        healthWarning={!!ageGate?.healthWarning}
+                        nonalcMark={!!ageGate?.nonalcMark}
                         onClose={() => setShowSuccess(false)}
                         onEvent={track}
                     />
@@ -505,6 +562,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                             terms={clean(landing.form.offerTerms)}
                             badge={clean(landing.form.offerBadge)}
                             brandColor={brandColor}
+                            healthWarning={!!ageGate?.healthWarning}
+                            nonalcMark={!!ageGate?.nonalcMark}
+                            warningFitKey={warningFitKey}
                         />
 
                         {/* Выбор филиала — ДО контактов */}
@@ -560,6 +620,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                     appUrl={buildAppUrl(submittedPhone)}
                     brandColor={brandColor}
                     address={club.address}
+                    healthWarning={!!ageGate?.healthWarning}
+                    nonalcMark={!!ageGate?.nonalcMark}
                     onClose={() => setShowSuccess(false)}
                     onEvent={track}
                 />

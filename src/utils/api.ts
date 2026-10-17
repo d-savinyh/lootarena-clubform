@@ -1,4 +1,6 @@
 // API для ClubForm — вызовы к публичному webhook n8n
+import { normalizeAgeGate, type LeadAgeGate } from './ageGate';
+export type { LeadAgeGate } from './ageGate';
 
 // Для dev используем proxy (настроен в vite.config.ts), для prod — прямой URL
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://n8n.lootarena.ru/webhook';
@@ -35,6 +37,10 @@ export interface ClubLanding {
         /** Сетевая форма: одна ссылка на несколько филиалов, филиал выбирает гость. */
         isNetwork?: boolean;
         clubs?: LandingClub[] | null;
+        /** Форма с энергетиком или безалкогольным пивом (18+): до показа предложения спрашиваем возраст,
+         *  рисуем надпись о вреде энергетиков и «0%». null — обычная форма. Ключ приходит только в ответ
+         *  на `with_adult: true`: без него сервер форму 18+ не отдаёт вовсе (старый клиент её не покажет). */
+        ageGate?: LeadAgeGate | null;
     };
 }
 
@@ -84,6 +90,9 @@ export interface LeadSubmission {
     raw_utm?: Record<string, string>;  // сырые метки: ВСЕ query-параметры страницы (чтобы ничего не терять)
     variant?: string;
     click_ids?: Record<string, string>;
+    /** Гость ответил «Да» на вопрос о возрасте (только у форм с ageGate). Сервер пока не проверяет:
+     *  возраст при выдаче подарка сверяет кассир по документу, ключ — на случай проверки при заявке. */
+    age_confirmed?: boolean;
 }
 
 // inventory/reserved — старый ответ сервера: «уже в инвентаре» против «ждёт регистрации»
@@ -154,13 +163,16 @@ async function callPublicAPI(action: string, data: Record<string, any> = {}): Pr
     return result;
 }
 
-// Получить данные лендинга по slug (variant — сохранённый выбор A/B для консистентности при перезагрузке)
+// Получить данные лендинга по slug (variant — сохранённый выбор A/B для консистентности при перезагрузке).
+// with_adult: этот клиент умеет спросить возраст и показать надпись о вреде энергетиков, поэтому сервер
+// отдаёт ему и формы 18+ (с ageGate). Старый клиент такую форму не получает — для него её нет.
 export async function getLandingData(slug: string, variant?: string): Promise<ClubLanding | null> {
     try {
-        const res = await callPublicAPI('get_landing', { slug, variant });
+        const res = await callPublicAPI('get_landing', { slug, variant, with_adult: true });
         // n8n может вернуть массив или объект
         const data = Array.isArray(res) ? res[0] : res;
-        if (!data || data.error) return null;
+        if (!data || data.error || !data.form) return null;
+        data.form.ageGate = normalizeAgeGate(data.form.ageGate);
         return data;
     } catch (e) {
         console.error('getLandingData error:', e);
