@@ -27,3 +27,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code: в git — только общие slash-команды (их синхронизирует /save через toolkit).
+# Локальное — settings.local.json, launch.json, worktrees — остаётся на диске.
+.claude/*
+!.claude/commands/
+!.claude/commands/*.md

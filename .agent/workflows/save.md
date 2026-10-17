@@ -4,9 +4,14 @@ description: Сохранить в GitHub
 
 // turbo-all
 
-Универсальная команда сохранения: проект + toolkit (скиллы/правила/конфиги).
+Универсальная команда сохранения: проект + toolkit (скиллы/правила/конфиги/команды).
 
 ## 0. ШАГ 0 — РЕВИЗИЯ ВЕТОК И WORKTREE (до всего остального)
+
+> Где подключён сторож `npm run check:branches` (ERP LootArena, lootarena-app) — он машинная часть
+> этой ревизии: блокирует, стоит в `preversion`, архивы уборки знает по реестру
+> `scripts/check-branches.archive`. Скрипт ниже остаётся для разбора: он показывает ещё и
+> СВЕЖЕСТЬ найденного по датам файлов.
 
 > ⚠️ **Рабочее дерево `main` — НЕ вся несохранённая работа.** Готовая фича может лежать
 > закоммиченной в ветке, которую никто не пушил, или НЕЗАКОММИЧЕННОЙ внутри worktree —
@@ -60,6 +65,69 @@ grep -c '<имя новой функции/урока>' <файл в main>      
 «проверено N веток и M worktree, не в main была работа K веток». Молчание здесь
 неотличимо от «не смотрел»: ровно поэтому пропажу два раза находил пользователь.
 
+### 0.4. ГИГИЕНА: подтвердил перенос — УБЕРИ (иначе платишь за тот же разбор каждый релиз)
+
+Шаг 0 сам по себе дёшев: три команды и сорок строк вывода. Дорого обходится то, что идёт
+следом, — разбор «а перенесено ли» по маркерам. Он растёт линейно с числом накопленных
+веток, и без уборки ты каждый релиз заново доказываешь то, что уже доказал.
+
+**Замер 14.09.2026 (ERP):** 34 локальных ветки и 28 worktree на **8.7 ГБ** диска; разбор
+съедал ~15–20k токенов за релиз. После уборки — 1 ветка, 1 worktree, 20 КБ, шаг 0 отдаёт
+одну строку за 0.03 с.
+
+**Порядок строго такой — сначала архив, потом удаление. Наоборот нельзя.**
+
+```bash
+# 1. АРХИВ: незакоммиченное в worktree — в коммит его же ветки
+git worktree list --porcelain | awk '/^worktree /{wt=$2} /^branch /{print wt"\t"$2}' \
+| while IFS=$'\t' read -r wt br; do
+  [ "$wt" = "$PWD" ] && continue
+  [ "$(git -C "$wt" status --short | wc -l)" = "0" ] && continue
+  git -C "$wt" add -A && git -C "$wt" commit -q -m "archive: работа worktree ${wt##*/} перед уборкой"
+done
+
+# 2. АРХИВ: каждая ветка с работой — на origin
+for b in $(git branch --format='%(refname:short)' | grep -v '^main$'); do
+  [ "$(git rev-list --count main..$b)" != "0" ] && git push -q origin "$b"
+done
+
+# 3. СВЕРКА — без неё не удалять. Локальный SHA обязан совпасть с origin
+for b in $(git branch --format='%(refname:short)' | grep -v '^main$'); do
+  [ "$(git rev-list --count main..$b)" = "0" ] && continue
+  [ "$(git rev-parse $b)" = "$(git ls-remote --heads origin $b | cut -f1)" ] \
+    || echo "❌ НЕ в архиве: $b — УДАЛЯТЬ НЕЛЬЗЯ"
+done
+
+# 3.5. РЕЕСТР (если в проекте есть сторож check:branches): архив, перенос которого
+#      подтверждён маркером, — в реестр. Без записи сторож (и `npm version`) краснеет на нём
+#      вечно. parked (НЕ перенесено) — только с согласия пользователя и с причиной.
+grep -q '"check:branches"' package.json && \
+  npm run check:branches -- --register origin/<ветка> ported "<каким маркером сверен перенос>"
+
+# 4. УДАЛЕНИЕ (только если сверка чистая)
+for wt in $(git worktree list --porcelain | grep '^worktree ' | sed 's/^worktree //'); do
+  [ "$wt" = "$PWD" ] || git worktree remove "$wt" --force
+done
+git worktree prune
+for b in $(git branch --format='%(refname:short)' | grep -v '^main$'); do git branch -D "$b"; done
+```
+
+**Почему именно так:**
+
+- **Ветка, которой нет на `origin`, существует ровно в одном месте — на этом диске.** Все 9
+  «невлитых» веток ERP были такими: `git branch -D` уничтожил бы их работу без следа (reflog
+  не вечен). Push стоит секунды и делает удаление обратимым.
+- **`git worktree remove --force` удаляет незакоммиченные файлы.** Ровно те, из-за потери
+  которых и появился шаг 0. Сначала коммит, потом push, только потом remove.
+- **Сверка по SHA — не формальность.** `git push` мог уйти в отказ (protected branch, нет
+  прав, отвалилась сеть), а цикл продолжился бы дальше. Сравнение локального и удалённого
+  SHA — единственное доказательство, что архив реально существует.
+- **Не удаляй ветку, работу которой ещё не подтвердил маркером.** Гигиена — это уборка
+  ПОСЛЕ проверки, а не вместо неё.
+
+**Когда делать:** после успешного релиза, когда перенос подтверждён и тег запушен. Не в
+середине разбора.
+
 ## 1. Проект — аудит всех изменений
 
 > ⚠️ **ПРАВИЛО**: НИКОГДА не полагайся на память о текущей сессии. В `git add .` попадают ВСЕ незакоммиченные файлы, включая изменения из предыдущих сессий. Ты ОБЯЗАН просмотреть diff КАЖДОГО файла.
@@ -72,7 +140,7 @@ git diff --stat
 
 ### 1.2. Просмотри diff КАЖДОГО значимого файла (ОБЯЗАТЕЛЬНО!)
 
-Для **каждого** файла из списка (кроме `package-lock.json`, `.agent/*`):
+Для **каждого** файла из списка (кроме `package-lock.json`, `.agent/*`, `.claude/*`):
 
 ```bash
 git diff -- <file> | head -100
@@ -89,11 +157,11 @@ git diff -- <file> | head -100
 
 ### 1.4. Ограничение индексации файлов
 
-> ⚠️ **КРИТИЧНОЕ ПРАВИЛО**: Если в карте изменений есть файлы из директории `.agent/` (скиллы, правила, воркфлоу) — **НЕ КОММИТЬ ИХ НА ЭТОМ ЭТАПЕ В ЛОКАЛЬНЫЙ ПРОЕКТ**. Сначала выполни шаг `3. Умная синхронизация скиллов` (перенос и пуш в глобальный тулкит).
+> ⚠️ **КРИТИЧНОЕ ПРАВИЛО**: Если в карте изменений есть файлы из директории `.agent/` или `.claude/` (скиллы, правила, воркфлоу, slash-команды) — **НЕ КОММИТЬ ИХ НА ЭТОМ ЭТАПЕ В ЛОКАЛЬНЫЙ ПРОЕКТ**. Сначала выполни шаг `3. Умная синхронизация скиллов` (перенос и пуш в глобальный тулкит).
 
 ### 1.5. Сформируй коммит-сообщение и сохрани (только проект!)
 
-Добавляй только те файлы, которые относятся непосредственно к проекту, минуя `.agent/` (если они менялись). Либо, если изменения были только про проектные, делай `git add .`.
+Добавляй только те файлы, которые относятся непосредственно к проекту, минуя `.agent/` и `.claude/` (если они менялись). Либо, если изменения были только про проектные, делай `git add .`.
 
 ```bash
 git commit -m "<осмысленное сообщение>" && git push
@@ -123,7 +191,7 @@ git commit -m "<осмысленное сообщение>" && git push
    ```bash
    git add CHANGELOG.md && git commit -m "changelog: обновлён unreleased" && git push
    ```
-   - Если изменения **только** в скиллах/конфигах/.agent — пропусти этот шаг
+   - Если изменения **только** в скиллах/конфигах/.agent/.claude — пропусти этот шаг
 
 ## 3. Умная синхронизация скиллов
 
@@ -170,12 +238,15 @@ bash .agent/scripts/toolkit-sync.sh detect-changes
    - `react-expert`, `typescript-pro`, `motion-animation` → `stack-react/skills/`
    - Правила: `docs.md`, `mcp.md` → `stack-backend/rules/`, остальные → `universal/rules/`
    - Workflows → `universal/workflows/`
+   - Slash-команды Claude → `universal/commands/`
 
    Скопируй **только файлы с `SAFE_TO_PUSH` или `NEW_FILE`**:
    ```bash
    cp -R .agent/skills/<skill>/ /tmp/agent-toolkit/<stack>/skills/<skill>/
    cp .agent/rules/<rule>.md /tmp/agent-toolkit/<dir>/rules/<rule>.md
    cp .agent/workflows/<wf>.md /tmp/agent-toolkit/universal/workflows/<wf>.md
+   mkdir -p /tmp/agent-toolkit/universal/commands
+   cp .claude/commands/<command>.md /tmp/agent-toolkit/universal/commands/<command>.md
    ```
 
    **📝 Changelog скиллов** — для каждого пушимого скилла обнови `## Changelog` в конце `SKILL.md`:
@@ -197,6 +268,8 @@ git -C /tmp/agent-toolkit pull --rebase 2>/dev/null
    cp -R /tmp/agent-toolkit/universal/skills/* .agent/skills/ 2>/dev/null
    cp -R /tmp/agent-toolkit/universal/rules/* .agent/rules/ 2>/dev/null
    cp -R /tmp/agent-toolkit/universal/workflows/* .agent/workflows/ 2>/dev/null
+   mkdir -p .claude/commands
+   cp -R /tmp/agent-toolkit/universal/commands/* .claude/commands/ 2>/dev/null
    # Для каждого стека из toolkit.json:
    cp -R /tmp/agent-toolkit/<stack>/skills/* .agent/skills/ 2>/dev/null
    cp -R /tmp/agent-toolkit/<stack>/rules/* .agent/rules/ 2>/dev/null
@@ -204,7 +277,7 @@ git -C /tmp/agent-toolkit pull --rebase 2>/dev/null
 
    **ТЕПЕРЬ МОЖНО ЗАКОММИТИТЬ ИХ В ЛОКАЛЬНЫЙ ПРОЕКТ:**
    ```bash
-   git add .agent/ && git commit -m "⚙️ Инфраструктура: синхронизация локального toolkit с глобальным" && git push
+   git add .agent/ .claude/ && git commit -m "⚙️ Инфраструктура: синхронизация локального toolkit с глобальным" && git push
    ```
 ```bash
 # Обновить baseline после pull
@@ -217,60 +290,3 @@ bash .agent/scripts/toolkit-sync.sh save-baseline
 - 📦 **Проект**: что закоммичено (кратко)
 - 📋 **CHANGELOG.md**: что добавлено в Unreleased (или «без изменений»)
 - 🧰 **Toolkit**: что запушено или «без изменений»
-
-### ГИГИЕНА: подтвердил перенос — УБЕРИ (иначе платишь за тот же разбор каждый релиз)
-
-Ревизия веток сама по себе дёшева: три команды и несколько десятков строк. Дорого обходится
-то, что идёт следом, — разбор «а перенесено ли» по маркерам содержимого. Он растёт линейно
-с числом накопленных веток, и без уборки каждый релиз заново доказывает уже доказанное.
-
-Замер в соседнем репозитории проекта (14.09.2026): 34 локальных ветки и 28 worktree заняли
-**8.7 ГБ**, а разбор съедал порядка 15–20k токенов за релиз. После уборки — одна ветка,
-один worktree, 20 КБ, ревизия отдаёт одну строку за 0.03 с.
-
-**Порядок нерушим: архив → сверка → удаление. Наоборот нельзя.**
-
-```bash
-# 1. АРХИВ: незакоммиченное в worktree — в коммит его же ветки
-git worktree list --porcelain | awk '/^worktree /{wt=$2} /^branch /{print wt"\t"$2}' \
-| while IFS=$'\t' read -r wt br; do
-  [ "$wt" = "$PWD" ] && continue
-  [ "$(git -C "$wt" status --short | wc -l)" = "0" ] && continue
-  git -C "$wt" add -A && git -C "$wt" commit -q -m "archive: работа worktree ${wt##*/} перед уборкой"
-done
-
-# 2. АРХИВ: каждая ветка с работой — на origin
-for b in $(git branch --format='%(refname:short)' | grep -v '^main$'); do
-  [ "$(git rev-list --count main..$b)" != "0" ] && git push -q origin "$b"
-done
-
-# 3. СВЕРКА — без неё не удалять. Локальный SHA обязан совпасть с origin
-for b in $(git branch --format='%(refname:short)' | grep -v '^main$'); do
-  [ "$(git rev-list --count main..$b)" = "0" ] && continue
-  [ "$(git rev-parse $b)" = "$(git ls-remote --heads origin $b | cut -f1)" ] \
-    || echo "❌ НЕ в архиве: $b — УДАЛЯТЬ НЕЛЬЗЯ"
-done
-
-# 4. УДАЛЕНИЕ (только если сверка чистая)
-for wt in $(git worktree list --porcelain | grep '^worktree ' | sed 's/^worktree //'); do
-  [ "$wt" = "$PWD" ] || git worktree remove "$wt" --force
-done
-git worktree prune
-for b in $(git branch --format='%(refname:short)' | grep -v '^main$'); do git branch -D "$b"; done
-```
-
-**Почему порядок именно такой:**
-
-- **Ветки, которой нет на `origin`, не существует нигде, кроме этого диска.** `git branch -D`
-  уничтожит её работу без следа — reflog не вечен. Push стоит секунды и делает удаление
-  обратимым.
-- **`git worktree remove --force` удаляет незакоммиченные файлы** — ровно те, ради которых
-  ревизия веток и появилась. Сначала коммит, потом push, только потом remove.
-- **Сверка по SHA — не формальность.** Push мог уйти в отказ (protected branch, нет прав,
-  сеть), а цикл продолжился бы дальше. Совпадение локального и удалённого SHA — единственное
-  доказательство, что архив существует.
-- **Не удаляй ветку, работу которой ещё не подтвердил маркером.** Гигиена — это уборка ПОСЛЕ
-  проверки, а не вместо неё.
-
-**Когда:** после успешного релиза, когда перенос подтверждён и тег запушен. Не в середине
-разбора.
