@@ -33,3 +33,8 @@ dist-ssr
 .claude/*
 !.claude/commands/
 !.claude/commands/*.md
+
+# Claude Code: общие хуки и настройки проекта — в git, чтобы были у всех
+!.claude/settings.json
+!.claude/hooks/
+!.claude/hooks/*.sh

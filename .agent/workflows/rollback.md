@@ -41,14 +41,28 @@ git log $PREVIOUS..$CURRENT --oneline
 
 ### 4. Выполни откат
 
-Создай новый patch-тег на коммите предыдущей версии:
+> ⚠️ **Тег откатывает только то, что едет в контейнере (фронт).** Функции БД, workflow n8n, модули ПК-агента
+> и всё, что применялось через MCP, остаются новыми. Открой changelog откатываемой версии: у пунктов Высокого
+> уровня есть строка «Как откатить» (`specs/db/migrations/_rollback/…`, `before.json` патча n8n). Фронт старой
+> версии против новой БД бывает хуже, чем новый фронт, — сначала реши, что откатывать вместе, и скажи пользователю.
+
+Создай новый patch-тег с кодом предыдущей версии:
 ```bash
-ROLLBACK_VERSION=$(npm version patch --no-git-tag-version)
-git checkout <предыдущий_тег> -- .
-git add .
-git commit -m "rollback: откат к <предыдущий_тег>"
-VERSION=$(node -p "require('./package.json').version")
-git tag "v$VERSION"
+PREV=<предыдущий_тег>
+CUR=$(git show HEAD:package.json | node -p 'JSON.parse(require("fs").readFileSync(0,"utf8")).version')
+NEXT=$(node -p "const [a,b,c]='$CUR'.split('.').map(Number); [a,b,c+1].join('.')")
+# --no-overlay: файлы, появившиеся после $PREV, удаляются. Без него они остаются в сборке — смесь двух версий.
+git checkout --no-overlay "$PREV" -- .
+# В сборку не едут, а откатывать их нельзя: журнал, инструкции, уроки, реестр сторожа веток
+for p in CHANGELOG.md CLAUDE.md REVIEW.md specs .claude .agent scripts/check-branches.archive; do
+  git cat-file -e "HEAD:$p" 2>/dev/null && git checkout --no-overlay HEAD -- "$p"
+done
+# Зависимости — как в $PREV, версия — выше текущей (иначе тег «уже есть»).
+# --ignore-scripts: preversion (сторож веток) в аварийном откате не нужен — старый код уже выпускался.
+npm version "$NEXT" --no-git-tag-version --ignore-scripts
+git add -A
+git commit -m "rollback: откат к $PREV"
+git tag "v$NEXT"
 git push && git push --tags
 ```
 
