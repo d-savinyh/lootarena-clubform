@@ -29,7 +29,7 @@ const PublicBracket: React.FC<{ data: PublicTournament; brandColor: string }> = 
             <div className={`flex items-center justify-between gap-2 px-3 py-2 text-sm ${win ? 'font-bold text-white' : id ? 'text-white/70' : 'text-white/25'}`}>
                 <span className="truncate">{id ? teams.get(id) || 'Команда' : m.status === 'bye' ? '—' : 'ждём'}</span>
                 <span className="tabular-nums" style={win ? { color: brandColor } : undefined}>
-                    {m.status === 'forfeit' ? (win ? 'W' : 'L') : m.score?.length ? wins : ''}
+                    {m.status === 'forfeit' ? (win ? 'W' : 'L') : m.winner_team_id && m.score?.length ? wins : ''}
                 </span>
             </div>
         );
@@ -61,6 +61,11 @@ const PublicBracket: React.FC<{ data: PublicTournament; brandColor: string }> = 
                                                     {side(m, m.team_a_id, wa)}
                                                     <div className="h-px bg-white/[0.06]" />
                                                     {side(m, m.team_b_id, wb)}
+                                                    {now && (m.pcs?.a?.length || m.pcs?.b?.length) ? (
+                                                        <div className="px-3 pb-2 pt-1 text-[11px] text-white/45">
+                                                            ПК: {[m.pcs?.a?.join(', '), m.pcs?.b?.join(', ')].filter(Boolean).join(' · ')}
+                                                        </div>
+                                                    ) : null}
                                                 </div>
                                             );
                                         })}

@@ -182,7 +182,8 @@ const TournamentPage: React.FC<{ token: string }> = ({ token }) => {
     );
 
     const action = (() => {
-        if (result) return <RegisterResultCard result={result.r} mode={result.mode} brandColor={BRAND} pageUrl={pageUrl} startText={start} />;
+        if (result) return <RegisterResultCard result={result.r} mode={result.mode} brandColor={BRAND} pageUrl={pageUrl} startText={start}
+            tournamentToken={token} confirmRequired={!!t.confirm_required} />;
         if (t.status === 'live' || finished) {
             return (
                 <div className="glass rounded-[28px] p-5 flex flex-col gap-4">

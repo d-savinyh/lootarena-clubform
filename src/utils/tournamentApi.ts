@@ -41,6 +41,8 @@ export interface PublicTournament {
         prizes: PublicPrize[];
         nominations: Array<{ title: string; prize: string | null }>;
         participation_prize: string | null;
+        /** «Только с подтверждённым номером»: без подтверждения в Telegram заявка освободит место через 30 минут. */
+        confirm_required?: boolean;
     };
     counts: { used: number; waitlist: number };
     registration_open: boolean;
@@ -49,6 +51,8 @@ export interface PublicTournament {
         id: string; bracket: 'upper' | 'lower' | 'third_place' | 'grand_final'; round: number; slot: number; best_of: number;
         status: string; team_a_id: string | null; team_b_id: string | null; winner_team_id: string | null;
         score: Array<{ a: number; b: number }> | null;
+        /** Номера ПК сторон матча — куда садиться. */
+        pcs?: { a?: number[]; b?: number[] } | null;
     }> | null;
     invite: { valid: boolean; kind?: 'party' | 'team'; team_name?: string | null; members?: number; size?: number } | null;
 }
@@ -136,6 +140,27 @@ export const joinTournament = async (token: string, inviteCode: string, person: 
             action: 'join', token, invite_code: inviteCode, ...person,
             age: person.age === 'adult' ? 'adult' : undefined, consent_version: CONSENT_VERSION,
         });
+    } catch {
+        return { ok: false, error: 'network' };
+    }
+};
+
+export interface ConfirmState {
+    confirmed: boolean;
+    /** Ссылка на бота: /start link_<токен> — бот попросит «Поделиться номером». */
+    link?: string;
+    expires_at?: string;
+    /** Бот открыт и ждёт контакт. */
+    waiting_contact?: boolean;
+    /** Итог последней попытки: phone_mismatch — номер в Telegram не совпал. */
+    result?: string | null;
+}
+
+/** Подтверждение номера заявки в Telegram: issue — получить ссылку, иначе — узнать статус. Код — код чек-ина участника. */
+export const confirmPhone = async (token: string, code: string, issue: boolean): Promise<{ ok: boolean; error?: string; data?: ConfirmState }> => {
+    try {
+        const r = await post({ action: issue ? 'confirm_issue' : 'confirm_status', token, code });
+        return r && typeof r === 'object' ? r : { ok: false, error: 'network' };
     } catch {
         return { ok: false, error: 'network' };
     }

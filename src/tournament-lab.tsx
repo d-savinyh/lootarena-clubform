@@ -27,6 +27,7 @@ const data = () => ({
         age_policy: sc === 'party' ? 'minors_allowed' : 'adults', stream_url: 'https://twitch.tv/example',
         prizes: [{ place_from: 1, place_to: 1, text: '5000 бонусов' }, { place_from: 2, place_to: 3, text: 'Футболка клуба' }],
         nominations: [{ title: 'Лучший игрок турнира', prize: '1000 бонусов' }], participation_prize: '100 бонусов',
+        confirm_required: q.get('confirm') === 'required',
     },
     counts: { used: sc === 'full' ? 40 : 31, waitlist: sc === 'full' ? 3 : 0 },
     registration_open: sc !== 'closed',
@@ -42,6 +43,7 @@ const data = () => ({
 const json = (v: unknown) => new Response(JSON.stringify([v]), { status: 200, headers: { 'Content-Type': 'application/json' } });
 const realFetch = window.fetch.bind(window);
 let captchaAsked = false;
+let confirmPolls = 0;
 window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
     if (!url.includes('/public/')) return realFetch(input, init);
@@ -55,6 +57,13 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
         if (sc === 'full') return json({ ok: true, status: 'waitlist', waitlist_pos: 4, checkin_code: '873a760e28d34320507d', kind: 'solo', members: 1, size: 1 });
         if (body.mode === 'party') return json({ ok: true, status: 'registered', number: 32, checkin_code: '873a760e28d34320507d', invite_code: '4c0231842d9d', kind: 'party', members: 1, size: body.party_size });
         return json({ ok: true, status: 'registered', number: 32, checkin_code: '873a760e28d34320507d', kind: 'solo', members: 1, size: 1 });
+    }
+    // Подтверждение номера: ссылка на бота; ?confirm=done — статус «подтверждён» после двух опросов.
+    if (body.action === 'confirm_issue') return json({ ok: true, data: { confirmed: false, link: '#bot-opened', expires_at: new Date(Date.now() + 30 * 6e4).toISOString() } });
+    if (body.action === 'confirm_status') {
+        confirmPolls += 1;
+        const done = q.get('confirm') === 'done' && confirmPolls > 2;
+        return json({ ok: true, data: { confirmed: done, waiting_contact: !done && confirmPolls > 1, result: q.get('confirm') === 'mismatch' ? 'phone_mismatch' : null } });
     }
     if (body.action === 'join') return json({ ok: true, status: 'joined', checkin_code: '1111aaaa2222bbbb3333', kind: 'party', members: 2, size: 3 });
     return json({ ok: false, error: 'unknown_action' });
