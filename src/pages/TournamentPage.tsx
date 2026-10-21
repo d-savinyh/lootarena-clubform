@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ClubHeader from '../components/ClubHeader';
 import RegisterForm from '../components/tournament/RegisterForm';
 import RegisterResultCard from '../components/tournament/RegisterResultCard';
+import WithdrawCard from '../components/tournament/WithdrawCard';
 import PublicBracket from '../components/tournament/PublicBracket';
 import { formatStart, viewTournament, type PublicTournament, type RegisterResult } from '../utils/tournamentApi';
 
@@ -42,6 +43,10 @@ const readUtm = (): Record<string, string> => {
 
 const TournamentPage: React.FC<{ token: string }> = ({ token }) => {
     const isDesktop = useIsDesktop();
+    const dropCode = useMemo(() => {
+        const c = new URLSearchParams(window.location.search).get('drop');
+        return c && /^[0-9a-f]{20}$/.test(c) ? c : null;
+    }, []);
     const invite = useMemo(() => {
         const c = new URLSearchParams(window.location.search).get('team');
         return c && /^[0-9a-f]{12}$/.test(c) ? c : null;
@@ -182,6 +187,8 @@ const TournamentPage: React.FC<{ token: string }> = ({ token }) => {
     );
 
     const action = (() => {
+        // «Не смогу прийти» — ссылка из напоминания бота: /t/<токен>?drop=<код чек-ина>
+        if (dropCode) return <WithdrawCard token={token} code={dropCode} brandColor={BRAND} pageUrl={pageUrl} />;
         if (result) return <RegisterResultCard result={result.r} mode={result.mode} brandColor={BRAND} pageUrl={pageUrl} startText={start}
             tournamentToken={token} confirmRequired={!!t.confirm_required} />;
         if (t.status === 'live' || finished) {

@@ -166,6 +166,29 @@ export const confirmPhone = async (token: string, code: string, issue: boolean):
     }
 };
 
+export interface WithdrawInfo {
+    status: 'active' | 'withdrawn' | 'already_withdrawn';
+    title?: string;
+    nick?: string;
+    kind?: 'solo' | 'party' | 'team';
+    team_name?: string | null;
+    /** Снимется вся заявка (капитан или одиночка) или только этот игрок. */
+    whole_entry?: boolean;
+    members?: number;
+    waitlist?: boolean;
+    promoted?: number;
+}
+
+/** «Не смогу прийти» по коду чек-ина: confirm=false — что будет снято, true — снять. */
+export const withdrawTournament = async (token: string, code: string, confirm: boolean): Promise<{ ok: boolean; error?: string; data?: WithdrawInfo }> => {
+    try {
+        const r = await post({ action: 'withdraw', token, code, confirm });
+        return r && typeof r === 'object' ? r : { ok: false, error: 'network' };
+    } catch {
+        return { ok: false, error: 'network' };
+    }
+};
+
 /** Отказ сервера — словами человека. */
 export const errorText = (code?: string): string => ({
     not_found: 'Турнир не найден — проверьте ссылку',

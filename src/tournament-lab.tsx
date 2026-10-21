@@ -65,6 +65,9 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
         const done = q.get('confirm') === 'done' && confirmPolls > 2;
         return json({ ok: true, data: { confirmed: done, waiting_contact: !done && confirmPolls > 1, result: q.get('confirm') === 'mismatch' ? 'phone_mismatch' : null } });
     }
+    if (body.action === 'withdraw') return json(body.confirm
+        ? { ok: true, data: { status: 'withdrawn', whole_entry: true, promoted: 1 } }
+        : { ok: true, data: { status: 'active', title: 'Пятничный кубок', nick: 'Шторм_капитан', kind: 'party', team_name: 'Шторм', whole_entry: true, members: 3 } });
     if (body.action === 'join') return json({ ok: true, status: 'joined', checkin_code: '1111aaaa2222bbbb3333', kind: 'party', members: 2, size: 3 });
     return json({ ok: false, error: 'unknown_action' });
 };
