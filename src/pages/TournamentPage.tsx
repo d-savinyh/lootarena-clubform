@@ -222,11 +222,11 @@ const TournamentPage: React.FC<{ token: string }> = ({ token }) => {
         <div className="min-h-screen">
             {isDesktop ? (
                 <div className="desktop-grid">
-                    <div className="desktop-grid-left">
+                    <div className="desktop-left">
                         <ClubHeader clubName={data.club.name} clubLogo={data.club.avatar_url || undefined} coverUrl={data.club.cover_url || undefined}
                             address={[data.club.city, data.club.address].filter(Boolean).join(', ') || null} brandColor={BRAND} isDesktopHero />
                     </div>
-                    <div className="desktop-grid-right px-10 py-12 flex flex-col gap-6 max-w-[560px]">{result ? <>{action}{info}</> : <>{info}{action}</>}</div>
+                    <div className="px-10 py-12 flex flex-col gap-6 max-w-[560px]">{result ? <>{action}{info}</> : <>{info}{action}</>}</div>
                 </div>
             ) : (
                 <div className="px-4 pb-12 flex flex-col gap-5">
