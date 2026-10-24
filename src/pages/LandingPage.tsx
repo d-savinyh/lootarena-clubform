@@ -62,6 +62,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
     const [confirmedAge, setConfirmedAge] = useState(() => readConfirmedAge());
     const [ageDeclined, setAgeDeclined] = useState(false);
     const ageGateShownRef = useRef(false);
+    // Для события ухода: эффект ниже не перезапускается на отправке заявки, иначе счётчик времени обнулился бы.
+    const submittedRef = useRef(false);
+    submittedRef.current = submitted;
     const isDesktop = useIsDesktop();
 
     // UTM параметры из URL. Источник нормализуем к нижнему регистру, чтобы 2gis/2GIS не двоились в аналитике.
@@ -163,12 +166,42 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
             if (pct > maxDepth) maxDepth = pct;
             [25, 50, 75, 100].forEach(d => { if (pct >= d && !sent.has(d)) { sent.add(d); trackEvent(fid, 'scroll_depth', { pct: d }, ctx); } });
         };
-        const onHide = () => trackEvent(fid, 'abandon', { max_scroll: maxDepth, converted: submitted }, ctx, true);
+        // Уход со страницы. На телефоне гость сворачивает браузер или смахивает вкладку — приходит только
+        // visibilitychange (hidden), pagehide там почти не бывает; pagehide ловит закрытие на десктопе.
+        // Время считаем только видимое. Шлём при КАЖДОМ скрытии накопленные значения: вернулся и ушёл
+        // снова — придёт ещё одно событие, отчёт берёт последнее по сессии.
+        const startedAt = performance.now();
+        let activeMs = 0;
+        let visibleSince: number | null = document.visibilityState === 'visible' ? startedAt : null;
+        let hides = 0;
+        const sendLeave = () => {
+            const now = performance.now();
+            if (visibleSince !== null) { activeMs += now - visibleSince; visibleSince = null; }
+            hides += 1;
+            trackEvent(fid, 'abandon', {
+                max_scroll: maxDepth,
+                converted: submittedRef.current,
+                active_ms: Math.round(activeMs),
+                total_ms: Math.round(now - startedAt),
+                hides,
+            }, ctx, true);
+        };
+        const onVisibility = () => {
+            if (document.visibilityState === 'hidden') sendLeave();
+            else visibleSince = performance.now();
+        };
+        // Если страница уже скрыта, уход отправлен в onVisibility — второй раз не шлём.
+        const onPageHide = () => { if (visibleSince !== null) sendLeave(); };
         window.addEventListener('scroll', onScroll, { passive: true });
-        window.addEventListener('pagehide', onHide);
-        return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('pagehide', onHide); };
+        document.addEventListener('visibilitychange', onVisibility);
+        window.addEventListener('pagehide', onPageHide);
+        return () => {
+            window.removeEventListener('scroll', onScroll);
+            document.removeEventListener('visibilitychange', onVisibility);
+            window.removeEventListener('pagehide', onPageHide);
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [landing, variant, submitted]);
+    }, [landing, variant]);
 
     // Возврат к невыполненному требованию: подсветить блок и подскроллить к нему.
     // Требование живёт выше по странице и на телефоне не видно.
