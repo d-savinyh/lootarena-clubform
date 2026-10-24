@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { getPhoneFormat, applyMask, phoneDigits, isValidPhone } from '../utils/phone';
+import ConsentSheet from './ConsentSheet';
 
 interface LeadFormProps {
     brandColor: string;
@@ -22,9 +23,12 @@ interface LeadFormProps {
     blocked?: boolean;
     blockReason?: string;
     onBlocked?: () => void;
+    /** Клуб, куда оставляют заявку: оператор данных в тексте согласия. */
+    clubName?: string;
 }
 
-const LeadForm: React.FC<LeadFormProps> = ({ brandColor, currency, onSubmit, isLoading, isDesktop, ctaText, onEvent, submitError, blocked, blockReason, onBlocked }) => {
+const LeadForm: React.FC<LeadFormProps> = ({ brandColor, currency, onSubmit, isLoading, isDesktop, ctaText, onEvent, submitError, blocked, blockReason, onBlocked, clubName }) => {
+    const [consentOpen, setConsentOpen] = useState(false);
     const fmt = getPhoneFormat(currency);
     const [phone, setPhone] = useState('');
     const [error, setError] = useState('');
@@ -168,11 +172,14 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, currency, onSubmit, isL
             {/* Дисклеймер. Упоминание SmartCaptcha обязательно: значок капчи мы прячем
                 (hideShield), а условия сервиса требуют уведомить о её использовании. */}
             <p className="text-[11px] text-white/15 text-center leading-relaxed px-6">
-                Нажимая кнопку, вы соглашаетесь на обработку персональных данных.<br />
+                Нажимая кнопку, вы даёте{' '}
+                <button type="button" onClick={() => { setConsentOpen(true); onEvent?.('consent_open'); }}
+                    className="underline decoration-white/10 hover:text-white/30 transition-colors">согласие на обработку персональных данных</button>.<br />
                 Форма защищена{' '}
                 <a href="https://yandex.ru/legal/smartcaptcha_termsofuse/" target="_blank" rel="noopener noreferrer"
                     className="underline decoration-white/10 hover:text-white/30 transition-colors">Yandex SmartCaptcha</a>
             </p>
+            {consentOpen && <ConsentSheet clubName={clubName || ''} onClose={() => setConsentOpen(false)} />}
         </form>
     );
 };

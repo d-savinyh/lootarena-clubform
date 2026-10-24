@@ -1,5 +1,6 @@
 // API для ClubForm — вызовы к публичному webhook n8n
 import { normalizeAgeGate, type LeadAgeGate } from './ageGate';
+import { rememberMetrikaClientId } from './clickIds';
 export type { LeadAgeGate } from './ageGate';
 
 // Для dev используем proxy (настроен в vite.config.ts), для prod — прямой URL
@@ -89,7 +90,10 @@ export interface LeadSubmission {
     utm_term?: string;      // ключевое слово / доп. метка
     raw_utm?: Record<string, string>;  // сырые метки: ВСЕ query-параметры страницы (чтобы ничего не терять)
     variant?: string;
+    /** Метки клика (`yclid`, `rb_clickid`, …) и ClientID Метрики `_ym_cid` — для офлайн-конверсий. */
     click_ids?: Record<string, string>;
+    /** Версия текста согласия, который гость видел под кнопкой (`src/utils/consent.ts`). */
+    consent_version?: string;
     /** Гость ответил «Да» на вопрос о возрасте (только у форм с ageGate). Сервер пока не проверяет:
      *  возраст при выдаче подарка сверяет кассир по документу, ключ — на случай проверки при заявке. */
     age_confirmed?: boolean;
@@ -298,6 +302,8 @@ export function injectPixels(t?: ClubLanding['form']['tracking']): void {
         w.ym.l = Date.now();
         addScript('https://mc.yandex.ru/metrika/tag.js');
         try { w.ym(Number(t.metrika), 'init', { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false }); } catch { /* noop */ }
+        // Вызов встаёт в очередь заглушки ym и отработает, когда загрузится tag.js.
+        rememberMetrikaClientId(Number(t.metrika));
     }
     // VK Пиксель / top.mail.ru (общий top-API _tmr)
     if (t.vk_pixel || t.top_mail) {

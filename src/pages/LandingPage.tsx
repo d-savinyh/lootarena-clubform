@@ -7,6 +7,8 @@ import SuccessScreen from '../components/SuccessScreen';
 import AgeGateScreen from '../components/AgeGateScreen';
 import { getLandingData, submitLead, trackView, trackEvent, injectPixels, fireLeadConversion, type ClubLanding, type GiftReason, type GiftStatus, type SubmitResult, type LandingClub } from '../utils/api';
 import { solveCaptcha } from '../utils/captcha';
+import { readClickIds, metrikaClientId } from '../utils/clickIds';
+import { CONSENT_VERSION } from '../utils/consent';
 import { readConfirmedAge, writeConfirmedAge } from '../utils/ageGate';
 
 interface LandingPageProps {
@@ -82,13 +84,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
         return o;
     })();
 
-    // Click ID рекламных систем (для offline-конверсий VK/Яндекс)
-    const clickIds: Record<string, string> = (() => {
-        const keys = ['yclid', 'ymclid', 'gclid', 'fbclid', '_openstat', 'vk_click_id', 'erid'];
-        const o: Record<string, string> = {};
-        keys.forEach(k => { const v = params.get(k); if (v) o[k] = v; });
-        return o;
-    })();
+    // Click ID рекламных систем (для офлайн-конверсий VK/Яндекс): из адреса или последний сохранённый клик.
+    // Читаем один раз: функция пишет в localStorage, а тело компонента выполняется на каждый рендер.
+    const [clickIds] = useState(() => readClickIds(slug, params));
 
     useEffect(() => {
         const load = async () => {
@@ -210,7 +208,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                 utm_term: utm.term,
                 raw_utm: Object.keys(rawUtm).length ? rawUtm : undefined,
                 variant,
-                click_ids: Object.keys(clickIds).length ? clickIds : undefined,
+                // ClientID берём в момент отправки: счётчик к этому времени уже загрузился и поставил cookie.
+                click_ids: (() => {
+                    const cid = landing.form.tracking?.metrika ? metrikaClientId() : undefined;
+                    const ids = cid ? { ...clickIds, _ym_cid: cid } : clickIds;
+                    return Object.keys(ids).length ? ids : undefined;
+                })(),
+                consent_version: CONSENT_VERSION,
                 // Форма 18+: сюда доходят только после ответа «Да» на вопрос о возрасте.
                 age_confirmed: landing.form.ageGate ? true : undefined,
             };
@@ -480,6 +484,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                                 blocked={needClub}
                                 blockReason={needClub ? 'Сначала выберите клуб' : undefined}
                                 onBlocked={focusClubPicker}
+                            clubName={club.name}
                                 isDesktop
                             />
 
@@ -582,6 +587,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                             blocked={needClub}
                             blockReason={needClub ? 'Сначала выберите клуб' : undefined}
                             onBlocked={focusClubPicker}
+                            clubName={club.name}
                         />
 
                         {/* Ошибка */}
