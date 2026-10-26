@@ -2,6 +2,7 @@
 import { normalizeAgeGate, type LeadAgeGate } from './ageGate';
 import { rememberMetrikaClientId } from './clickIds';
 export type { LeadAgeGate } from './ageGate';
+import { normalizePage, type LandingPageDesign } from './page';
 
 // Для dev используем proxy (настроен в vite.config.ts), для prod — прямой URL
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://n8n.lootarena.ru/webhook';
@@ -42,6 +43,8 @@ export interface ClubLanding {
          *  рисуем надпись о вреде энергетиков. null — обычная форма. Ключ приходит только в ответ
          *  на `with_adult: true`: без него сервер форму 18+ не отдаёт вовсе (старый клиент её не покажет). */
         ageGate?: LeadAgeGate | null;
+        /** Лид-формы 2.0: тема и блоки страницы (offer_config.page). null — прежний вид страницы. */
+        page?: LandingPageDesign | null;
     };
 }
 
@@ -177,6 +180,11 @@ export async function getLandingData(slug: string, variant?: string): Promise<Cl
         const data = Array.isArray(res) ? res[0] : res;
         if (!data || data.error || !data.form) return null;
         data.form.ageGate = normalizeAgeGate(data.form.ageGate);
+        data.form.page = normalizePage(data.form.page);
+        if (import.meta.env.DEV) {
+            const t = new URLSearchParams(window.location.search).get('dev_page');
+            if (t) data.form.page = normalizePage((await import('./pageDevFixture')).pageDevFixture(t));
+        }
         return data;
     } catch (e) {
         console.error('getLandingData error:', e);

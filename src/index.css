@@ -258,3 +258,85 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Лид-формы 2.0 — «Вид страницы» (offer_config.page): темы «Ночь», «Фото», «Светлая».
+   Цвета — дизайн-система «Плитка» (night/surface/line/ink, зелёный «свободно» везде);
+   акцент — цвет клуба из настроек формы. Без page страница рисуется прежним видом.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Geologica:wght@300;400;500;600;700;800&display=swap');
+
+.lf-page {
+  --lf-bg: #0a0b0a;
+  --lf-surface: #121412;
+  --lf-raised: #1a1d1a;
+  --lf-line: #262a26;
+  --lf-ink: #eef2ec;
+  --lf-muted: #9ea39d;
+  --lf-free: #42ff72;
+  --lf-on-free: #06110a;
+  --lf-busy: rgba(238, 242, 236, 0.16);
+  --lf-on-accent: #06110a;
+  font-family: 'Geologica', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--lf-bg);
+  color: var(--lf-ink);
+  min-height: 100vh;
+}
+.lf-page[data-theme='light'] {
+  --lf-bg: #f4f6f3;
+  --lf-surface: #ffffff;
+  --lf-raised: #eef2ec;
+  --lf-line: #dce1da;
+  --lf-ink: #0a0b0a;
+  --lf-muted: #525851;
+  --lf-busy: rgba(10, 11, 10, 0.12);
+}
+.lf-card {
+  background: var(--lf-surface);
+  border: 1px solid var(--lf-line);
+  border-radius: 28px;
+}
+.lf-h2 { margin: 0; font-size: 22px; font-weight: 600; line-height: 1.2; }
+.lf-muted { color: var(--lf-muted); }
+.lf-kicker { font-size: 14px; font-weight: 500; color: var(--lf-muted); }
+.lf-label { font-size: 12px; font-weight: 600; color: var(--lf-muted); }
+.lf-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 46px; padding: 0 18px; border-radius: 14px; font-size: 15px; font-weight: 700;
+  background: var(--lf-raised); color: var(--lf-ink); text-decoration: none; border: 0; cursor: pointer;
+  transition: filter 250ms cubic-bezier(.22,.8,.3,1);
+}
+.lf-btn:hover { filter: brightness(1.15); }
+.lf-btn--accent { background: var(--lf-accent); color: var(--lf-on-accent); }
+.lf-page :focus-visible { outline: 2px solid color-mix(in srgb, var(--lf-free) 50%, transparent); outline-offset: 2px; }
+.lf-scroll-x { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.lf-scroll-x::-webkit-scrollbar { display: none; }
+.lf-scroll-x > * { scroll-snap-align: start; flex-shrink: 0; }
+
+/* Маркер клуба на карте: логотип в зелёном кольце со свечением (как на lootarena.ru/gamers). */
+.lf-map-marker {
+  width: 52px; height: 52px; border-radius: 999px; background: #050607; border: 3px solid #42ff72;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 10px rgba(66, 255, 114, 0.14), 0 0 36px rgba(66, 255, 114, 0.55);
+}
+.lf-map-marker img { width: 32px; height: 32px; object-fit: contain; border-radius: 999px; }
+
+/* Светлая тема: общие компоненты формы (OfferCard, LeadForm, ClubPicker) нарисованы под тёмный фон
+   классами text-white/* и .glass. Переопределяем их только внутри светлой страницы. */
+.lf-page[data-theme='light'] .glass {
+  background: #ffffff; border-color: #dce1da;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.lf-page[data-theme='light'] .text-white { color: #0a0b0a; }
+.lf-page[data-theme='light'] :is(.text-white\/70, .text-white\/65, .text-white\/60, .text-white\/50) { color: #2c312b; }
+.lf-page[data-theme='light'] :is(.text-white\/40, .text-white\/35, .text-white\/30, .text-white\/25) { color: #525851; }
+.lf-page[data-theme='light'] :is(.text-white\/20, .text-white\/15, .text-white\/10) { color: #6b716a; }
+.lf-page[data-theme='light'] :is(.border-white\/5, .border-white\/8, .border-white\/10, .border-white\/15) { border-color: #dce1da; }
+.lf-page[data-theme='light'] .bg-white\/3 { background-color: #eef2ec; }
+.lf-page[data-theme='light'] .text-red-400 { color: #a82b1c; }
+.lf-page[data-theme='light'] .input-apple { background: #eef2ec; border-color: #dce1da; color: #0a0b0a; }
+.lf-page[data-theme='light'] .input-apple::placeholder { color: #6b716a; }
+.lf-page[data-theme='light'] .input-apple:focus { border-color: #9ea39d; box-shadow: 0 0 0 4px rgba(10, 11, 10, 0.05); }
+
+/* Тёмные темы «Плитки»: общие стеклянные карточки — на surface, а не на чистом чёрном. */
+.lf-page:not([data-theme='light']) .glass { background: rgba(18, 20, 18, 0.82); border-color: #262a26; }
