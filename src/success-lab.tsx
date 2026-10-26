@@ -19,6 +19,7 @@ const SCENARIOS: Record<string, Scenario> = {
     already_gifted: { gift: GIFT, giftStatus: 'none', giftReason: 'already_gifted', clubPromoCount: 27 },
     not_eligible_club: { gift: GIFT, giftStatus: 'none', giftReason: 'not_eligible', ineligibleBy: 'new_club', clubPromoCount: 27 },
     not_eligible_app: { gift: GIFT, giftStatus: 'none', giftReason: 'not_eligible', ineligibleBy: 'new_app', clubPromoCount: 1 },
+    not_eligible_rule: { gift: GIFT, giftStatus: 'none', giftReason: 'not_eligible', ineligibleBy: 'rule', clubPromoCount: 3 },
     not_eligible_old_server: { gift: GIFT, giftStatus: 'none', giftReason: 'not_eligible' },
     no_gift: { gift: null, giftStatus: 'none', giftReason: 'no_gift', clubPromoCount: 3 },
 };

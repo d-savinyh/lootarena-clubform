@@ -110,7 +110,8 @@ export type GiftStatus = 'granted' | 'inventory' | 'reserved' | 'none';
 export type GiftReason = 'granted' | 'already_gifted' | 'not_eligible' | 'no_gift' | 'duplicate';
 
 /** Правило ФОРМЫ, под которое гость не подошёл. Свойство формы, а не гостя. */
-export type IneligibleBy = 'new_app' | 'new_club' | 'new_network' | '';
+// rule — гибкое условие клуба (визиты, давность, пополнения; ЕРП 26.10.2026): какое именно — не раскрываем.
+export type IneligibleBy = 'new_app' | 'new_club' | 'new_network' | 'rule' | '';
 
 /** Подарок прошлой заявки этой формы ещё не забран: лежит в инвентаре или ждёт регистрации. */
 export type PrevGiftState = 'unclaimed' | '';
@@ -125,7 +126,7 @@ const toPrevGiftState = (raw: unknown): PrevGiftState =>
     raw === 'unclaimed' || raw === 'active' || raw === 'awaiting_reg' ? 'unclaimed' : '';
 
 const toIneligibleBy = (raw: unknown): IneligibleBy =>
-    raw === 'new_app' || raw === 'new_club' || raw === 'new_network' ? raw : '';
+    raw === 'new_app' || raw === 'new_club' || raw === 'new_network' || raw === 'rule' ? raw : '';
 
 /** Отказы сетевой формы: филиал не выбран / выбранный филиал уже не в наборе формы. */
 export type NetworkError = 'club_required' | 'club_not_in_form';
