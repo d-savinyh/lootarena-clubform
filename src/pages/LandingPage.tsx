@@ -46,6 +46,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
         duplicate?: boolean;
         prevGiftState?: SubmitResult['prevGiftState'];
         ineligibleBy?: SubmitResult['ineligibleBy'];
+        ineligibleReasons?: SubmitResult['ineligibleReasons'];
         clubPromoCount?: number;
     }>();
     // Ошибка ОТПРАВКИ (лимит, отказ капчи) — в отличие от `error` не подменяет собой весь лендинг,
@@ -254,7 +255,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
             if (result.ok) {
                 setGiftStatus(result.giftStatus ?? (landing.form.gift ? 'reserved' : 'none'));
                 setGiftReason(result.giftReason);
-                setSubmitMeta({ duplicate: result.duplicate, prevGiftState: result.prevGiftState, ineligibleBy: result.ineligibleBy, clubPromoCount: result.clubPromoCount });
+                setSubmitMeta({ duplicate: result.duplicate, prevGiftState: result.prevGiftState, ineligibleBy: result.ineligibleBy, ineligibleReasons: result.ineligibleReasons, clubPromoCount: result.clubPromoCount });
                 setSubmitted(true);
                 setShowSuccess(true);
                 // Конверсия «лид» во все подключённые пиксели + поведенческое событие
@@ -516,6 +517,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         duplicate={submitMeta?.duplicate}
                         prevGiftState={submitMeta?.prevGiftState}
                         ineligibleBy={submitMeta?.ineligibleBy}
+                        ineligibleReasons={submitMeta?.ineligibleReasons}
                         clubPromoCount={submitMeta?.clubPromoCount}
                         gift={gift}
                         appUrl={buildAppUrl(submittedPhone)}
@@ -618,6 +620,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                     duplicate={submitMeta?.duplicate}
                     prevGiftState={submitMeta?.prevGiftState}
                     ineligibleBy={submitMeta?.ineligibleBy}
+                    ineligibleReasons={submitMeta?.ineligibleReasons}
                     clubPromoCount={submitMeta?.clubPromoCount}
                     gift={gift}
                     appUrl={buildAppUrl(submittedPhone)}

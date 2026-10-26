@@ -113,6 +113,17 @@ export type GiftReason = 'granted' | 'already_gifted' | 'not_eligible' | 'no_gif
 // rule — гибкое условие клуба (визиты, давность, пополнения; ЕРП 26.10.2026): какое именно — не раскрываем.
 export type IneligibleBy = 'new_app' | 'new_club' | 'new_network' | 'rule' | '';
 
+/**
+ * Обезличенная причина «без подарка» по гибкому условию клуба (ЕРП 26.10.2026): какого условия не хватило —
+ * без цифр, дат и фактов о номере. Сервер отдаёт только коды из этого списка (нода Format Submit).
+ */
+export type IneligibleReason = 'unavailable' | 'base_in' | 'base_out' | 'base_visited' | 'visits_min' | 'visits_max'
+    | 'recent_visit' | 'topups_min' | 'topups_max' | 'topup_sum_min' | 'topup_sum_max' | 'app_has' | 'app_none';
+const INELIGIBLE_REASONS: IneligibleReason[] = ['unavailable', 'base_in', 'base_out', 'base_visited', 'visits_min',
+    'visits_max', 'recent_visit', 'topups_min', 'topups_max', 'topup_sum_min', 'topup_sum_max', 'app_has', 'app_none'];
+const toIneligibleReasons = (raw: unknown): IneligibleReason[] =>
+    Array.isArray(raw) ? raw.filter((x): x is IneligibleReason => INELIGIBLE_REASONS.includes(x as IneligibleReason)) : [];
+
 /** Подарок прошлой заявки этой формы ещё не забран: лежит в инвентаре или ждёт регистрации. */
 export type PrevGiftState = 'unclaimed' | '';
 
@@ -148,6 +159,8 @@ export interface SubmitResult {
     prevGiftState?: PrevGiftState;
     /** Под какое правило формы гость не подошёл (только при giftReason = not_eligible). */
     ineligibleBy?: IneligibleBy;
+    /** Каких условий клуба не хватило (только при ineligibleBy = rule) — обезличенно. */
+    ineligibleReasons?: IneligibleReason[];
     /** Сколько миссий клуба открыто в Loot Arena прямо сейчас — факт о клубе, не о госте. */
     clubPromoCount?: number;
 }
@@ -197,6 +210,7 @@ export async function submitLead(data: LeadSubmission): Promise<SubmitResult> {
             duplicate: result?.duplicate,
             prevGiftState: toPrevGiftState(result?.prevGiftState ?? result?.prev_gift_state),
             ineligibleBy: toIneligibleBy(result?.ineligibleBy ?? result?.ineligible_by),
+            ineligibleReasons: toIneligibleReasons(result?.ineligibleReasons ?? result?.ineligible_reasons),
             clubPromoCount: Math.max(0, Number(result?.clubPromoCount ?? result?.club_promo_count) || 0),
             submissionId: result?.submissionId || result?.id,
             error: result?.error,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import type { LeadGift, GiftStatus, GiftReason, IneligibleBy, PrevGiftState } from '../utils/api';
+import type { LeadGift, GiftStatus, GiftReason, IneligibleBy, IneligibleReason, PrevGiftState } from '../utils/api';
 import { HEALTH_WARNING_TEXT } from '../utils/ageGate';
 
 interface SuccessScreenProps {
@@ -18,12 +18,32 @@ interface SuccessScreenProps {
     prevGiftState?: PrevGiftState;
     /** Правило формы, под которое гость не подошёл: «новым для клуба» / «новым в приложении» / «новым для сети». */
     ineligibleBy?: IneligibleBy;
+    /** Каких условий клуба не хватило (при ineligibleBy = rule) — без цифр и фактов о номере. */
+    ineligibleReasons?: IneligibleReason[];
     /** Сколько миссий клуба открыто в Loot Arena прямо сейчас (0 — не знаем или нет). */
     clubPromoCount?: number;
     /** Форма с энергетиком: под карточкой подарка — надпись о вреде (ageGate.healthWarning). */
     healthWarning?: boolean;
     onEvent?: (type: string, meta?: Record<string, any>) => void;
 }
+
+/** Причина «без подарка» гостю — какого условия клуба не хватило, без цифр и фактов о номере (ЕРП 26.10.2026). */
+const REASON_TEXT: Record<IneligibleReason, string> = {
+    unavailable: 'подарок по этой форме сейчас недоступен',
+    base_in: 'подарок — для тех, кто ещё не был в клубе',
+    base_out: 'подарок — для гостей, которые уже бывали в клубе',
+    base_visited: 'подарок — для тех, кто ещё ни разу не был в клубе',
+    visits_min: 'не хватает визитов в клуб',
+    visits_max: 'подарок — для тех, кто бывал в клубе реже',
+    recent_visit: 'подарок — для тех, кто давно не был в клубе',
+    topups_min: 'не хватает пополнений',
+    topups_max: 'подарок — для тех, кто пополнял реже',
+    topup_sum_min: 'не хватает суммы пополнений',
+    topup_sum_max: 'подарок — для тех, кто пополнял на меньшую сумму',
+    app_has: 'подарок — для новых пользователей Loot Arena',
+    app_none: 'подарок — для тех, у кого уже есть аккаунт Loot Arena',
+};
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /**
  * Устойчивое открытие внешней ссылки.
@@ -128,7 +148,7 @@ const formatDelay = (hours: number): string => {
 
 const secondaryBtn = 'flex items-center justify-center gap-2 w-full py-4 rounded-2xl glass-light text-white/60 hover:text-white hover:bg-white/8 active:bg-white/12 active:scale-[0.98] transition-all text-sm font-bold';
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, giftReason, duplicate, prevGiftState, ineligibleBy, clubPromoCount, healthWarning, onEvent }) => {
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, giftReason, duplicate, prevGiftState, ineligibleBy, ineligibleReasons = [], clubPromoCount, healthWarning, onEvent }) => {
     const mapsUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
     const app = appUrl || 'https://app.lootarena.ru';
     const store = detectStore();
@@ -311,10 +331,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                                     <>Этот подарок — для тех, кто ещё не был в клубах сети, поэтому за эту заявку он не начисляется.
                                         Мы свяжемся с вами, ждём в <span className="text-white font-bold">{clubName}</span>!</>
                                 ) : ineligibleBy === 'rule' ? (
-                                    // Своё условие клуба (визиты, давность, пополнения): говорим только, что подарок
-                                    // для другой группы гостей, — ни условия, ни фактов о номере наружу.
-                                    <>Этот подарок клуб приготовил для другой группы гостей, поэтому за эту заявку он не начисляется.
-                                        Мы свяжемся с вами, ждём в <span className="text-white font-bold">{clubName}</span>!</>
+                                    // Своё условие клуба: какого условия не хватило — обезличенно, без цифр и дат
+                                    // (решение владельца 26.10.2026). Старый сервер без причин — общий текст.
+                                    ineligibleReasons.length > 0 ? (
+                                        <>За эту заявку подарок не начисляется:
+                                            <span className="block mt-2 text-white/70">
+                                                {ineligibleReasons.map(r => <span key={r} className="block">· {capitalize(REASON_TEXT[r])}</span>)}
+                                            </span>
+                                            <span className="block mt-2">Мы свяжемся с вами, ждём в <span className="text-white font-bold">{clubName}</span>!</span></>
+                                    ) : (
+                                        <>Этот подарок клуб приготовил для другой группы гостей, поэтому за эту заявку он не начисляется.
+                                            Мы свяжемся с вами, ждём в <span className="text-white font-bold">{clubName}</span>!</>
+                                    )
                                 ) : ineligibleBy === 'new_app' ? (
                                     // Аккаунт у гостя есть — это и так следует из отказа по правилу формы,
                                     // поэтому звать «в свой аккаунт» можно, ничего нового о номере не раскрывая.
