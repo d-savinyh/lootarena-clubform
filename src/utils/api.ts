@@ -20,6 +20,8 @@ export interface ClubLanding {
         };
         /** Валюта клуба — по ней выбирается формат телефона (RUB → +7, BYN → +375, UZS → +998). */
         currency?: string;
+        /** Юрлицо клуба — оператор ПДн в тексте согласия. У сетевой формы — null, оператор у филиала. */
+        operator?: LandingOperator | null;
     };
     form: {
         id: string;
@@ -45,6 +47,16 @@ export interface ClubLanding {
     };
 }
 
+/** Оператор персональных данных — юрлицо клуба (сервер: `clubform_operator_public`). Адрес — только
+ *  у организаций: у ИП в реквизитах лежит адрес прописки, его не публикуем. */
+export interface LandingOperator {
+    name: string;
+    /** «ИНН», в Беларуси — «УНП». */
+    taxLabel: string;
+    taxId: string;
+    address?: string | null;
+}
+
 /** Филиал сетевой формы: гость выбирает, КУДА придёт, до ввода контактов. */
 export interface LandingClub {
     id: string;
@@ -58,6 +70,8 @@ export interface LandingClub {
     currency?: string;
     /** Подарок ИМЕННО этого филиала: номинал у филиалов разный (410/520/560 ₽ у Убежища 78). */
     gift?: LeadGift | null;
+    /** Юрлицо филиала — оператор ПДн, если гость оставляет заявку в этот филиал. */
+    operator?: LandingOperator | null;
 }
 
 export interface LeadGift {

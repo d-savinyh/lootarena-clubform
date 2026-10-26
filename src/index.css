@@ -1,8 +1,10 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+/* Шрифт «Плитки» — Geologica (OFL) из своего бандла: со сторонних CDN (Google Fonts) шрифты не грузим,
+   иначе IP гостя уходит за рубеж при каждом открытии формы (specs/legal/lead-forms-compliance.md в ЕРП). */
+@import "@fontsource-variable/geologica";
 
 @theme {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: 'Geologica Variable', 'Geologica', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --color-brand: #30D158;
   --color-brand-dark: #1a7a33;
   --color-neon-blue: #0A84FF;

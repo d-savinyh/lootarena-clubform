@@ -68,7 +68,7 @@ const HealthWarning: React.FC<{ fitKey?: string }> = ({ fitKey }) => {
             })
             : null;
         document.querySelectorAll('[data-ad-area]').forEach((n) => ro?.observe(n));
-        // Шрифт Inter догружается после первой отрисовки — метрики текста меняются.
+        // Шрифт Geologica догружается после первой отрисовки — метрики текста меняются.
         document.fonts?.ready.then(schedule).catch(() => { /* без шрифтов — оставляем замер по фолбэку */ });
         window.addEventListener('resize', schedule);
         return () => {

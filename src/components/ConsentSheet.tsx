@@ -1,17 +1,22 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { consentSections, PRIVACY_URL } from '../utils/consent';
+import { consentSections, PRIVACY_URL, type ForeignTracker } from '../utils/consent';
+import type { LandingOperator } from '../utils/api';
 
 interface ConsentSheetProps {
     /** Клуб, в который гость оставляет заявку: он оператор данных. */
     clubName: string;
+    /** Юрлицо клуба (оператор данных); нет — в тексте название клуба. */
+    operator?: LandingOperator | null;
+    /** Зарубежные счётчики, стоящие на форме. */
+    foreign?: ForeignTracker[];
     onClose: () => void;
 }
 
 /** Текст согласия на обработку данных — отдельным окном поверх формы (на телефоне — шторкой снизу).
  *  Рисуется порталом в body: карточки формы с backdrop-filter становятся контейнером для fixed,
  *  и окно внутри них съезжает вместе с карточкой. */
-const ConsentSheet: React.FC<ConsentSheetProps> = ({ clubName, onClose }) => {
+const ConsentSheet: React.FC<ConsentSheetProps> = ({ clubName, operator, foreign, onClose }) => {
     const closeRef = useRef<HTMLButtonElement>(null);
 
     useEffect(() => {
@@ -59,7 +64,7 @@ const ConsentSheet: React.FC<ConsentSheetProps> = ({ clubName, onClose }) => {
                 </p>
 
                 <div className="space-y-5">
-                    {consentSections(clubName).map(s => (
+                    {consentSections(clubName, operator, foreign).map(s => (
                         <section key={s.title}>
                             <h3 className="text-sm font-semibold text-white/90 mb-2">{s.title}</h3>
                             <ul className="space-y-1.5">
