@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import ClubHeader from '../components/ClubHeader';
 import ClubPicker from '../components/ClubPicker';
 import OfferCard from '../components/OfferCard';
 import LeadForm from '../components/LeadForm';
 import SuccessScreen from '../components/SuccessScreen';
 import AgeGateScreen from '../components/AgeGateScreen';
+// Вид страницы (Лид-формы 2.0) — отдельным чанком: формам без темы он не нужен.
+const PageLanding = lazy(() => import('../components/page/PageLanding'));
 import { getLandingData, submitLead, trackView, trackEvent, injectPixels, fireLeadConversion, type ClubLanding, type GiftReason, type GiftStatus, type SubmitResult, type LandingClub } from '../utils/api';
 import { solveCaptcha } from '../utils/captcha';
 import { readClickIds, metrikaClientId } from '../utils/clickIds';
@@ -421,6 +423,85 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
             </div>
         </div>
     ) : null;
+
+    // ══════════════════════════════════════════════
+    // ██  ЛИД-ФОРМЫ 2.0 — тема и блоки страницы    ██
+    // ══════════════════════════════════════════════
+    // Клуб выбрал вид страницы в ЕРП (offer_config.page). Заявка, возраст, сетевая форма и экран успеха —
+    // те же, что ниже; меняется только раскладка и оформление. Без page — прежний вид.
+    const page = landing.form.page || null;
+    if (page) {
+        const accent = page.accent || brandColor;
+        return (
+            <>
+                <Suspense fallback={<div className="min-h-screen" style={{ background: page.theme === 'light' ? '#f4f6f3' : '#0a0b0a' }} />}>
+                <PageLanding
+                    page={page}
+                    club={club}
+                    accent={accent}
+                    coverUrl={coverUrl}
+                    isDesktop={isDesktop}
+                    hideClubDetails={needClub}
+                    onEvent={track}
+                    offer={
+                        <OfferCard
+                            title={landing.form.offerTitle}
+                            description={clean(landing.form.offerDescription) || ''}
+                            terms={clean(landing.form.offerTerms)}
+                            badge={clean(landing.form.offerBadge)}
+                            brandColor={accent}
+                            isDesktop={isDesktop}
+                            healthWarning={!!ageGate?.healthWarning}
+                            warningFitKey={warningFitKey}
+                        />
+                    }
+                    clubPicker={clubPicker}
+                    giftCard={giftCard}
+                    form={
+                        <LeadForm
+                            brandColor={accent}
+                            clubAddress={club.address}
+                            currency={club.currency}
+                            onSubmit={handleSubmit}
+                            isLoading={isSubmitting}
+                            ctaText={ctaText}
+                            onEvent={track}
+                            submitError={submitError}
+                            blocked={needClub}
+                            blockReason={needClub ? 'Сначала выберите клуб' : undefined}
+                            onBlocked={focusClubPicker}
+                            clubName={club.name}
+                            isDesktop={isDesktop}
+                        />
+                    }
+                    error={error ? (
+                        <div className="glass rounded-2xl p-4 text-center animate-fade-in">
+                            <p className="text-sm text-red-400">{error}</p>
+                        </div>
+                    ) : null}
+                />
+                </Suspense>
+                {showSuccess && (
+                    <SuccessScreen
+                        clubName={club.name}
+                        giftStatus={giftStatus}
+                        giftReason={giftReason}
+                        duplicate={submitMeta?.duplicate}
+                        prevGiftState={submitMeta?.prevGiftState}
+                        ineligibleBy={submitMeta?.ineligibleBy}
+                        clubPromoCount={submitMeta?.clubPromoCount}
+                        gift={gift}
+                        appUrl={buildAppUrl(submittedPhone)}
+                        brandColor={accent}
+                        address={club.address}
+                        healthWarning={!!ageGate?.healthWarning}
+                        onClose={() => setShowSuccess(false)}
+                        onEvent={track}
+                    />
+                )}
+            </>
+        );
+    }
 
     // ══════════════════════════════════════════════
     // ██  ДЕСКТОПНЫЙ LAYOUT — двухколоночный       ██
