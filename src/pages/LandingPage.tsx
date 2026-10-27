@@ -318,8 +318,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
             address: selectedClub.address || landing.club.address,
             workingHours: selectedClub.workingHours || landing.club.workingHours,
             currency: selectedClub.currency || landing.club.currency,
+            // Оператор данных — юрлицо ВЫБРАННОГО филиала, а не сети.
+            operator: selectedClub.operator ?? null,
         }
         : landing.club;
+    // Зарубежные счётчики называем в тексте согласия (российским клубам сервер их не отдаёт).
+    const foreignTrackers = (['meta', 'gtag'] as const).filter(k => !!landing.form.tracking?.[k]);
     const needClub = !!netClubs && !selectedClub;
 
     const brandColor = landing.form.brandColor || '#30D158';
@@ -567,6 +571,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                                 blockReason={needClub ? 'Сначала выберите клуб' : undefined}
                                 onBlocked={focusClubPicker}
                             clubName={club.name}
+                                operator={club.operator}
+                                foreignTrackers={foreignTrackers}
                                 isDesktop
                             />
 
@@ -671,6 +677,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                             blockReason={needClub ? 'Сначала выберите клуб' : undefined}
                             onBlocked={focusClubPicker}
                             clubName={club.name}
+                            operator={club.operator}
+                            foreignTrackers={foreignTrackers}
                         />
 
                         {/* Ошибка */}

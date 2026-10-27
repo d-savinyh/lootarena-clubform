@@ -1,9 +1,12 @@
 // Согласие гостя на обработку персональных данных при заявке в лид-форме.
 // С 01.09.2025 согласие — отдельный документ (152-ФЗ, ст. 9), поэтому текст открывается отдельным окном,
-// а не прячется в политике. Оператор — клуб; Loot Arena обрабатывает данные по его поручению.
-// ЧЕРНОВИК для юриста (24.10.2026): меняешь текст — меняй версию, она пишется в заявку (consent_version).
+// а не прячется в политике. Оператор — клуб (его юрлицо); Loot Arena обрабатывает данные по его поручению.
+// ЧЕРНОВИК для юриста: меняешь текст — меняй версию, она пишется в заявку (consent_version).
+// Разбор рисков — specs/legal/lead-forms-compliance.md в репозитории ЕРП.
 
-export const CONSENT_VERSION = 'lead-2026-10-24';
+import type { LandingOperator } from './api';
+
+export const CONSENT_VERSION = 'lead-2026-10-26';
 export const PRIVACY_URL = 'https://lootarena.ru/legal/privacy';
 
 export interface ConsentSection {
@@ -11,14 +14,33 @@ export interface ConsentSection {
     items: string[];
 }
 
-/** Текст согласия. `club` — название клуба, куда гость оставляет заявку (оператор данных). */
-export function consentSections(club: string): ConsentSection[] {
-    const operator = club ? `компьютерный клуб «${club}»` : 'компьютерный клуб, в который вы оставляете заявку';
+/** Строка об операторе: юрлицо клуба с ИНН (адрес — только у организаций), иначе название клуба. */
+function operatorLine(club: string, op?: LandingOperator | null): string {
+    const clubPart = club ? `компьютерный клуб «${club}»` : 'компьютерный клуб, в который вы оставляете заявку';
+    if (!op) return `Оператор — ${clubPart}.`;
+    const req = [`${op.taxLabel || 'ИНН'} ${op.taxId}`, op.address].filter(Boolean).join(', ');
+    return `Оператор — ${op.name} (${req}), ${clubPart}.`;
+}
+
+/** Зарубежные рекламные системы, чьи счётчики клуб поставил на форму (клубам в РФ сервер их не отдаёт). */
+export type ForeignTracker = 'meta' | 'gtag';
+
+const FOREIGN_NAMES: Record<ForeignTracker, string> = {
+    meta: 'Meta Platforms, Inc. (США)',
+    gtag: 'Google LLC (США)',
+};
+
+/**
+ * Текст согласия. `club` — название клуба, куда гость оставляет заявку; `operator` — его юрлицо
+ * (у сетевой формы — выбранного филиала, до выбора его нет); `foreign` — зарубежные счётчики формы.
+ */
+export function consentSections(club: string, operator?: LandingOperator | null, foreign: ForeignTracker[] = []): ConsentSection[] {
+    const foreignNames = foreign.map(k => FOREIGN_NAMES[k]);
     return [
         {
             title: 'Кто обрабатывает данные',
             items: [
-                `Оператор — ${operator}.`,
+                operatorLine(club, operator),
                 'По поручению клуба данные обрабатывает Loot Arena (ИП Карпушев Никита Сергеевич, ОГРНИП 318352500068775, ИНН 352201555447) — сервис, на котором работает эта форма.',
             ],
         },
@@ -27,15 +49,18 @@ export function consentSections(club: string): ConsentSection[] {
             items: [
                 'Имя, номер телефона и Telegram, если вы его указали.',
                 'Сведения о визитах в клуб и оплатах в нём в течение 30 дней после заявки.',
-                'Технические данные: IP-адрес в зашифрованном виде, файлы cookie, метки рекламного перехода (yclid, ClientID Яндекс Метрики, rb_clickid VK Рекламы).',
+                'Технические данные: IP-адрес в виде хэша (восстановить адрес по нему нельзя), файлы cookie, метки рекламного перехода (yclid, ClientID Яндекс Метрики, rb_clickid VK Рекламы).',
             ],
         },
         {
-            title: 'Зачем',
+            title: 'Зачем и кому',
             items: [
-                'Выдать подарок по заявке и связаться с вами по ней.',
+                'Выдать подарок по заявке и связаться с вами по ней. Заявка приходит администраторам клуба — в рабочий чат клуба в Telegram или в программу клуба. Подарок закрепляется за номером телефона в приложении Loot Arena.',
                 'Учесть ваш визит и начисления в клубе.',
                 'Оценить, какая реклама приводит гостей: клуб передаёт ООО «ЯНДЕКС» и ООО «ВК» метку рекламного перехода, факт визита и сумму оплаты. Имя и номер телефона рекламным системам не передаются.',
+                ...(foreignNames.length
+                    ? [`На странице работают счётчики ${foreignNames.join(' и ')}: они получают технические данные вашего браузера, в том числе за пределами страны.`]
+                    : []),
             ],
         },
         {

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { getPhoneFormat, applyMask, phoneDigits, isValidPhone } from '../utils/phone';
 import ConsentSheet from './ConsentSheet';
+import { PRIVACY_URL, type ForeignTracker } from '../utils/consent';
+import type { LandingOperator } from '../utils/api';
 
 interface LeadFormProps {
     brandColor: string;
@@ -25,9 +27,13 @@ interface LeadFormProps {
     onBlocked?: () => void;
     /** Клуб, куда оставляют заявку: оператор данных в тексте согласия. */
     clubName?: string;
+    /** Юрлицо этого клуба — оператор данных (у сетевой формы до выбора филиала его нет). */
+    operator?: LandingOperator | null;
+    /** Зарубежные счётчики формы — называем их в тексте согласия. */
+    foreignTrackers?: ForeignTracker[];
 }
 
-const LeadForm: React.FC<LeadFormProps> = ({ brandColor, currency, onSubmit, isLoading, isDesktop, ctaText, onEvent, submitError, blocked, blockReason, onBlocked, clubName }) => {
+const LeadForm: React.FC<LeadFormProps> = ({ brandColor, currency, onSubmit, isLoading, isDesktop, ctaText, onEvent, submitError, blocked, blockReason, onBlocked, clubName, operator, foreignTrackers }) => {
     const [consentOpen, setConsentOpen] = useState(false);
     const fmt = getPhoneFormat(currency);
     const [phone, setPhone] = useState('');
@@ -174,12 +180,16 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, currency, onSubmit, isL
             <p className="text-[11px] text-white/15 text-center leading-relaxed px-6">
                 Нажимая кнопку, вы даёте{' '}
                 <button type="button" onClick={() => { setConsentOpen(true); onEvent?.('consent_open'); }}
-                    className="underline decoration-white/10 hover:text-white/30 transition-colors">согласие на обработку персональных данных</button>.<br />
+                    className="underline decoration-white/10 hover:text-white/30 transition-colors">согласие на обработку персональных данных</button>{' '}
+                и принимаете{' '}
+                <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer"
+                    onClick={() => onEvent?.('privacy_open')}
+                    className="underline decoration-white/10 hover:text-white/30 transition-colors">политику конфиденциальности</a>.<br />
                 Форма защищена{' '}
                 <a href="https://yandex.ru/legal/smartcaptcha_termsofuse/" target="_blank" rel="noopener noreferrer"
                     className="underline decoration-white/10 hover:text-white/30 transition-colors">Yandex SmartCaptcha</a>
             </p>
-            {consentOpen && <ConsentSheet clubName={clubName || ''} onClose={() => setConsentOpen(false)} />}
+            {consentOpen && <ConsentSheet clubName={clubName || ''} operator={operator} foreign={foreignTrackers} onClose={() => setConsentOpen(false)} />}
         </form>
     );
 };
