@@ -7,7 +7,7 @@ import SuccessScreen from '../components/SuccessScreen';
 import AgeGateScreen from '../components/AgeGateScreen';
 // Вид страницы (Лид-формы 2.0) — отдельным чанком: формам без темы он не нужен.
 const PageLanding = lazy(() => import('../components/page/PageLanding'));
-import { getLandingData, submitLead, trackView, trackEvent, injectPixels, fireLeadConversion, type ClubLanding, type GiftReason, type GiftStatus, type SubmitResult, type LandingClub } from '../utils/api';
+import { getLandingData, submitLead, trackView, trackEvent, injectPixels, fireLeadConversion, type ClubLanding, type GiftReason, type GiftStatus, type SubmitResult, type LandingClub, type LinkUtm } from '../utils/api';
 import { solveCaptcha } from '../utils/captcha';
 import { readClickIds, metrikaClientId } from '../utils/clickIds';
 import { CONSENT_VERSION } from '../utils/consent';
@@ -15,7 +15,21 @@ import { readConfirmedAge, writeConfirmedAge } from '../utils/ageGate';
 
 interface LandingPageProps {
     slug: string;
+    /** Код короткой ссылки канала из адреса /<форма>/<код> (App.tsx). */
+    link?: string;
 }
+
+type PageUtm = { source?: string; medium?: string; campaign?: string; content?: string; term?: string };
+
+/** Метки страницы: свои utm_* из адреса, иначе — метки короткой ссылки канала. */
+const withLinkUtm = (fromUrl: PageUtm, link: LinkUtm | null): PageUtm =>
+    fromUrl.source || !link?.source ? fromUrl : {
+        source: link.source.trim().toLowerCase(),
+        medium: link.medium || undefined,
+        campaign: link.campaign || undefined,
+        content: link.content || undefined,
+        term: link.term || undefined,
+    };
 
 /** Хук для определения десктопного экрана */
 const useIsDesktop = (breakpoint = 1024) => {
@@ -34,7 +48,7 @@ const useIsDesktop = (breakpoint = 1024) => {
     return isDesktop;
 };
 
-const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ slug, link }) => {
     const [landing, setLanding] = useState<ClubLanding | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,19 +85,24 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
 
     // UTM параметры из URL. Источник нормализуем к нижнему регистру, чтобы 2gis/2GIS не двоились в аналитике.
     const params = new URLSearchParams(window.location.search);
-    const utm = {
+    const urlUtm = {
         source: (params.get('utm_source') || '').trim().toLowerCase() || undefined,
         medium: params.get('utm_medium') || undefined,
         campaign: params.get('utm_campaign') || undefined,
         content: params.get('utm_content') || undefined,   // VK Реклама: ID объявления (banner_id)
         term: params.get('utm_term') || undefined,
     };
+    // Короткая ссылка канала (/<форма>/<код>): метки сохранённой ссылки клуба приходят с формой. Свои utm_* в адресе
+    // главнее — рекламная система могла дописать их поверх короткой ссылки.
+    const [linkUtm, setLinkUtm] = useState<LinkUtm | null>(null);
+    const utm = withLinkUtm(urlUtm, linkUtm);
 
     // Сырые метки: сохраняем ВСЕ query-параметры страницы (в т.ч. VK/Яндекс-специфичные),
     // чтобы никогда не потерять детализацию, даже если она не в стандартных utm_*.
     const rawUtm: Record<string, string> = (() => {
         const o: Record<string, string> = {};
         params.forEach((v, k) => { if (v && k.length <= 64 && v.length <= 512) o[k] = v; });
+        if (link) o.la_link = link;
         return o;
     })();
 
@@ -96,9 +115,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
             try {
                 let stored: string | undefined;
                 try { stored = localStorage.getItem(`cf_variant_${slug}`) || undefined; } catch { /* нет localStorage */ }
-                const data = await getLandingData(slug, stored);
+                const data = await getLandingData(slug, stored, link);
                 if (data) {
                     setLanding(data);
+                    setLinkUtm(data.form.linkUtm || null);
+                    // Первый просмотр уходит в этом же тике — метки ссылки берём из ответа, а не из состояния.
+                    const viewUtm = withLinkUtm(urlUtm, data.form.linkUtm || null);
                     const v = data.form.variant;
                     if (v) {
                         setVariant(v);
@@ -115,10 +137,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug }) => {
                         } catch { /* нет sessionStorage */ }
                         setSelectedClub(restored || (nc.length === 1 ? nc[0] : null));
                     }
-                    trackView(data.form.id, utm, v, rawUtm);
+                    trackView(data.form.id, viewUtm, v, rawUtm);
                     // Пиксели рекламных систем (по ID) + поведенческое событие просмотра
                     injectPixels(data.form.tracking);
-                    trackEvent(data.form.id, 'page_view', {}, { variant: v, utm });
+                    trackEvent(data.form.id, 'page_view', {}, { variant: v, utm: viewUtm });
                     // Заголовок вкладки ставит эффект ниже: до ответа о возрасте в нём нет текста акции.
                 } else {
                     setError('Страница не найдена');

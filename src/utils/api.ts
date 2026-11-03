@@ -47,7 +47,18 @@ export interface ClubLanding {
         ageGate?: LeadAgeGate | null;
         /** Лид-формы 2.0: тема и блоки страницы (offer_config.page). null — прежний вид страницы. */
         page?: LandingPageDesign | null;
+        /** Короткая ссылка канала /<форма>/<код>: метки сохранённой UTM-ссылки клуба. null — кода нет или он неизвестен. */
+        linkUtm?: LinkUtm | null;
     };
+}
+
+/** Метки короткой ссылки канала (сервер: `clubform_link_utm_public`, только эти пять полей). */
+export interface LinkUtm {
+    source?: string;
+    medium?: string;
+    campaign?: string;
+    content?: string;
+    term?: string;
 }
 
 /** Оператор персональных данных — юрлицо клуба (сервер: `clubform_operator_public`). Адрес — только
@@ -201,14 +212,27 @@ async function callPublicAPI(action: string, data: Record<string, any> = {}): Pr
 // Получить данные лендинга по slug (variant — сохранённый выбор A/B для консистентности при перезагрузке).
 // with_adult: этот клиент умеет спросить возраст и показать надпись о вреде энергетиков, поэтому сервер
 // отдаёт ему и формы 18+ (с ageGate). Старый клиент такую форму не получает — для него её нет.
-export async function getLandingData(slug: string, variant?: string): Promise<ClubLanding | null> {
+/** Метки короткой ссылки: только строки, обрезанные по длине поля; пусто — null. */
+function normalizeLinkUtm(v: unknown): LinkUtm | null {
+    if (!v || typeof v !== 'object') return null;
+    const o = v as Record<string, unknown>;
+    const out: LinkUtm = {};
+    (['source', 'medium', 'campaign', 'content', 'term'] as const).forEach(k => {
+        const x = typeof o[k] === 'string' ? (o[k] as string).trim().slice(0, 256) : '';
+        if (x) out[k] = x;
+    });
+    return out.source ? out : null;
+}
+
+export async function getLandingData(slug: string, variant?: string, link?: string): Promise<ClubLanding | null> {
     try {
-        const res = await callPublicAPI('get_landing', { slug, variant, with_adult: true });
+        const res = await callPublicAPI('get_landing', { slug, variant, with_adult: true, ...(link ? { link } : {}) });
         // n8n может вернуть массив или объект
         const data = Array.isArray(res) ? res[0] : res;
         if (!data || data.error || !data.form) return null;
         data.form.ageGate = normalizeAgeGate(data.form.ageGate);
         data.form.page = normalizePage(data.form.page);
+        data.form.linkUtm = normalizeLinkUtm(data.form.linkUtm);
         if (import.meta.env.DEV) {
             const t = new URLSearchParams(window.location.search).get('dev_page');
             if (t) data.form.page = normalizePage((await import('./pageDevFixture')).pageDevFixture(t));
