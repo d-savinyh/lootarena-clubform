@@ -318,8 +318,13 @@ export interface EvtCtx {
     utm?: { source?: string; medium?: string; campaign?: string; content?: string; term?: string };
 }
 
-// Отправка поведенческого события. useBeacon — для ухода со страницы (pagehide/abandon),
-// чтобы событие не потерялось. Иначе fetch keepalive. Трекинг не критичен — ошибки глотаем.
+// Отправка поведенческого события. useBeacon — для ухода со страницы (abandon), чтобы событие не
+// потерялось. Иначе fetch keepalive. Трекинг не критичен — ошибки глотаем.
+// Тело уходит как text/plain: это «простой» запрос без CORS-preflight. С application/json браузер
+// сначала спрашивает OPTIONS, а при закрытии вкладки до самого события дело часто не доходит
+// (24.10.2026: abandon был у 71 сессии за неделю из тысяч). Сервер разбирает JSON из строки сам
+// (`clubform_track_event_raw`).
+const EVENT_CONTENT_TYPE = 'text/plain;charset=UTF-8';
 export function trackEvent(
     formId: string,
     eventType: string,
@@ -342,10 +347,11 @@ export function trackEvent(
         user_agent: navigator.userAgent,
     });
     try {
-        if (useBeacon && navigator.sendBeacon) {
-            navigator.sendBeacon(EVENT_URL, new Blob([body], { type: 'application/json' }));
-        } else {
-            fetch(EVENT_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => { });
+        // sendBeacon возвращает false, если очередь браузера переполнена — тогда пробуем fetch.
+        const queued = useBeacon && !!navigator.sendBeacon
+            && navigator.sendBeacon(EVENT_URL, new Blob([body], { type: EVENT_CONTENT_TYPE }));
+        if (!queued) {
+            fetch(EVENT_URL, { method: 'POST', headers: { 'Content-Type': EVENT_CONTENT_TYPE }, body, keepalive: true }).catch(() => { });
         }
     } catch { /* трекинг не критичен */ }
 }
