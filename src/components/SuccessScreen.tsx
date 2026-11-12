@@ -3,10 +3,14 @@ import { createPortal } from 'react-dom';
 import type { LeadGift, GiftStatus, GiftReason, IneligibleBy, IneligibleReason, PrevGiftState } from '../utils/api';
 import { HEALTH_WARNING_TEXT } from '../utils/ageGate';
 import GiftIcon from './GiftIcon';
+import GiftPoster from './GiftPoster';
 
 interface SuccessScreenProps {
     clubName: string;
     brandColor: string;
+    /** Логотип и валюта клуба — для постера подарка (тот же вид, что в инвентаре приложения). */
+    clubLogo?: string | null;
+    currency?: string;
     address: string;
     onClose?: () => void;
     gift?: LeadGift | null;
@@ -118,14 +122,6 @@ const plural = (n: number, one: string, few: string, many: string): string => {
     return many;
 };
 
-const giftSummary = (gift: LeadGift): string => {
-    const t = gift.reward_text?.trim();
-    if (t) return t;
-    const amt = gift.reward_meta?.bonus_amount;
-    if (gift.reward_type === 'BONUSES' && amt) return `${amt} бонусов`;
-    if (gift.reward_type === 'MONEY' && amt) return `${amt} ₽`;
-    return 'Подарок';
-};
 
 /**
  * Отложенная активация (ЕРП, 05.10.2026): клуб может открыть подарок лид-формы не сразу, а через
@@ -149,7 +145,7 @@ const formatDelay = (hours: number): string => {
 
 const secondaryBtn = 'flex items-center justify-center gap-2 w-full py-4 rounded-2xl glass-light text-white/60 hover:text-white hover:bg-white/8 active:bg-white/12 active:scale-[0.98] transition-all text-sm font-bold';
 
-const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, address, onClose, gift, appUrl, giftStatus, giftReason, duplicate, prevGiftState, ineligibleBy, ineligibleReasons = [], clubPromoCount, healthWarning, onEvent }) => {
+const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, clubLogo = null, currency, address, onClose, gift, appUrl, giftStatus, giftReason, duplicate, prevGiftState, ineligibleBy, ineligibleReasons = [], clubPromoCount, healthWarning, onEvent }) => {
     const mapsUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
     const app = appUrl || 'https://app.lootarena.ru';
     const store = detectStore();
@@ -214,8 +210,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
             <div className="min-h-full flex items-center justify-center p-6">
 
                 <div className="relative max-w-md w-full animate-scale-in">
-                {/* Иконка */}
-                <div className="flex justify-center mb-8">
+                {/* Иконка — когда подарка-постера нет (подарок показывает сам постер ниже). */}
+                {!showGift && <div className="flex justify-center mb-8">
                     <div className="relative">
                         <div
                             className="w-28 h-28 rounded-full flex items-center justify-center animate-float text-5xl"
@@ -232,7 +228,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                             )}
                         </div>
                     </div>
-                </div>
+                </div>}
 
                 {showGift ? (
                     <>
@@ -255,26 +251,18 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                             </p>
                         </div>
 
-                        {/* Карточка подарка */}
-                        <div className="glass rounded-[24px] p-5 mb-5 flex items-center gap-4">
-                            <div
-                                className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0"
-                                style={{ backgroundColor: `${brandColor}18` }}
-                            >
-                                {gift!.reward_icon || <GiftIcon className="w-7 h-7" color={brandColor} />}
-                            </div>
-                            <div className="min-w-0">
-                                <div className="text-lg font-black text-white truncate">{giftSummary(gift!)}</div>
-                                {delayHours > 0 && (
-                                    <div className="text-xs font-bold mt-0.5" style={{ color: brandColor }}>🔒 Откроется через {formatDelay(delayHours)}</div>
-                                )}
-                                {gift!.expires_in_days && (
-                                    <div className="text-xs text-white/35 mt-0.5">
-                                        Действует {gift!.expires_in_days} дн. {delayHours > 0 ? 'после открытия' : 'после получения'}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                        {/* Подарок — постер 2.0, как его увидит гость в инвентаре приложения. */}
+                        <GiftPoster
+                            className="mb-5"
+                            gift={gift!}
+                            clubName={clubName}
+                            clubLogo={clubLogo}
+                            accent={brandColor}
+                            currency={currency}
+                            hint={delayHours > 0
+                                ? `Откроется через ${formatDelay(delayHours)}${gift!.expires_in_days ? `, потом действует ${gift!.expires_in_days} дн.` : ''}`
+                                : null}
+                        />
                         {/* Подробности уже показанной рекламы: надпись обычного размера, без подгонки под 7% —
                             по правилу 7% она стоит в карточке предложения (как окно миссии в приложении). */}
                         {healthWarning && (

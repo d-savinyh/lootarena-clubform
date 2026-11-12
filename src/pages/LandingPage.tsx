@@ -12,7 +12,7 @@ import { solveCaptcha } from '../utils/captcha';
 import { readClickIds, metrikaClientId } from '../utils/clickIds';
 import { CONSENT_VERSION } from '../utils/consent';
 import { readConfirmedAge, writeConfirmedAge } from '../utils/ageGate';
-import GiftIcon from '../components/GiftIcon';
+import GiftPoster from '../components/GiftPoster';
 
 interface LandingPageProps {
     slug: string;
@@ -467,22 +467,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug, link }) => {
     const giftUnknown = giftVaries && !selectedClub;
     // Меняется подарок (выбрали филиал) — меняется площадь рекламы: надпись о вреде подгоняется заново.
     const warningFitKey = `${selectedClub?.id || ''}|${giftUnknown ? '' : gift?.reward_text || ''}`;
+    // Подарок — постер 2.0, как в инвентаре приложения (куда гость попадёт после заявки).
     const giftCard = gift ? (
-        // data-ad-area: карточка подарка — часть рекламы, по ней считается площадь надписи о вреде энергетиков.
-        <div data-ad-area="gift" className="glass rounded-2xl p-4 flex items-center gap-3 animate-fade-in">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0" style={{ backgroundColor: `${brandColor}18` }}>
-                {gift.reward_icon || <GiftIcon className="w-6 h-6" color={brandColor} />}
-            </div>
-            <div className="min-w-0">
-                <div className="text-[11px] uppercase tracking-wider text-white/35 font-semibold mb-0.5">Подарок за регистрацию</div>
-                <div className="text-base font-black text-white truncate">
-                    {giftUnknown
-                        ? 'Зависит от клуба'
-                        : (gift.reward_text || (gift.reward_meta?.bonus_amount ? `${gift.reward_meta.bonus_amount} бонусов` : 'Подарок'))}
-                </div>
-                {giftUnknown && <div className="text-[12px] text-white/30 mt-0.5">Выберите клуб — покажем ваш подарок</div>}
-            </div>
-        </div>
+        <GiftPoster
+            gift={gift}
+            clubName={selectedClub?.name || landing.club.name}
+            clubLogo={landing.club.avatarUrl || null}
+            accent={landing.form.page?.accent || brandColor}
+            currency={selectedClub?.currency || landing.club.currency}
+            unknown={giftUnknown}
+            hint={giftUnknown ? 'Выберите клуб — покажем ваш подарок' : null}
+        />
     ) : null;
 
     // ══════════════════════════════════════════════
@@ -545,6 +540,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug, link }) => {
                 {showSuccess && (
                     <SuccessScreen
                         clubName={club.name}
+                        clubLogo={club.avatarUrl || null}
+                        currency={selectedClub?.currency || club.currency}
                         giftStatus={giftStatus}
                         giftReason={giftReason}
                         duplicate={submitMeta?.duplicate}
@@ -648,6 +645,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug, link }) => {
                 {showSuccess && (
                     <SuccessScreen
                         clubName={club.name}
+                        clubLogo={club.avatarUrl || null}
+                        currency={selectedClub?.currency || club.currency}
                         giftStatus={giftStatus}
                         giftReason={giftReason}
                         duplicate={submitMeta?.duplicate}
@@ -745,6 +744,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug, link }) => {
             {showSuccess && (
                 <SuccessScreen
                     clubName={club.name}
+                    clubLogo={club.avatarUrl || null}
+                    currency={selectedClub?.currency || club.currency}
                     giftStatus={giftStatus}
                     giftReason={giftReason}
                     duplicate={submitMeta?.duplicate}

@@ -1,0 +1,85 @@
+/* Подарок формы — постер 2.0, той же семьи, что подарок в приложении (lootarena-app, App2GiftPoster + App2Poster.css):
+   свет цвета клуба, фирменный персонаж (волк в гарнитуре) справа показывает на подарок, подарок крупно в плитке «Плитки»
+   с наклоном −5°, внутри ровно — сумма цифрами Loot Arena; срок — наклейкой; клуб с логотипом и название — снизу.
+   Гость после заявки видит тот же подарок в приложении, поэтому вид один. Карточка тёмная в любой теме страницы. */
+@font-face {
+  font-family: "Loot Arena Digits";
+  src: url("/brand/fonts/LootArenaDigits-ExtraBold.woff2") format("woff2");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+.cf-gp {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 11;
+  min-height: 220px;
+  overflow: hidden;
+  border-radius: var(--brand-radius-panel);
+  background: var(--brand-surface);
+  color: var(--brand-ink);
+  container-type: inline-size;
+  isolation: isolate;
+}
+.cf-gp-glow {
+  position: absolute; left: 8%; right: 8%; top: 4%; height: 64%; z-index: -1; pointer-events: none;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--club, var(--brand-green)) 42%, transparent), transparent);
+}
+/* Персонаж справа за подарком (отражение не нужно: «машет» рукой со стороны подарка). Низ растворён. */
+.cf-gp-art {
+  position: absolute; right: -4%; bottom: 22%; height: 78%; width: auto; max-width: none; z-index: -1;
+  pointer-events: none; user-select: none;
+  -webkit-mask-image: linear-gradient(180deg, black 72%, transparent 96%); mask-image: linear-gradient(180deg, black 72%, transparent 96%);
+}
+
+/* Подарок в плитке: форма «Плитки» с наклоном в цвете клуба (слой .cf-gp-tile), содержимое — ровно поверх. */
+.cf-gp-plate {
+  position: absolute; left: 6%; bottom: 31%; z-index: 1; width: 42%;
+  display: grid; place-items: center; container-type: inline-size; aspect-ratio: 122 / 123;
+  color: var(--brand-on-photo); isolation: isolate; filter: drop-shadow(var(--brand-shadow-item));
+}
+.cf-gp-tile {
+  position: absolute; inset: 0; z-index: -1;
+  -webkit-mask: url('/brand/tile.svg') center / contain no-repeat; mask: url('/brand/tile.svg') center / contain no-repeat;
+  transform: rotate(var(--brand-tilt));
+  background: linear-gradient(155deg, color-mix(in srgb, var(--club, var(--brand-green)) 78%, var(--brand-on-photo)), var(--club, var(--brand-green)) 50%, color-mix(in srgb, var(--club, var(--brand-green)) 58%, var(--brand-night)));
+}
+.cf-gp-count { display: inline-flex; align-items: baseline; gap: var(--brand-space-1); line-height: 1; white-space: nowrap; }
+.cf-gp-count span { font: 800 30cqw / 1 "Loot Arena Digits", var(--brand-font-sans); font-variant-numeric: tabular-nums; }
+.cf-gp-count small { font: 800 14cqw / 1 var(--brand-font-sans); opacity: .8; }
+.cf-gp-count.is-long { flex-direction: column; align-items: center; }
+.cf-gp-count.is-long small { max-width: 80%; font-size: 10cqw; text-align: center; white-space: normal; }
+.cf-gp-word { font: 800 20cqw / 1.05 var(--brand-font-sans); }
+.cf-gp-word.is-name {
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  padding: 0 12%; font-size: 13cqw; text-align: center; overflow-wrap: anywhere;
+}
+.cf-gp-icon { font-size: 34cqw; line-height: 1; }
+
+/* Срок — наклейка сверху слева, светлая, с наклоном знака. */
+.cf-gp-when {
+  position: absolute; left: var(--brand-space-3); top: var(--brand-space-3); z-index: 2;
+  padding: var(--brand-space-1) var(--brand-space-2); border-radius: var(--brand-radius-mark);
+  background: var(--brand-ink); color: var(--brand-night);
+  font: 700 var(--brand-type-label-size) / 1.2 var(--brand-font-sans);
+  transform: rotate(var(--brand-tilt)); transform-origin: left top;
+}
+
+/* Подпись: клуб с логотипом → что за подарок. Мягкий переход в поверхность вместо линии (как постер 2.0). */
+.cf-gp-body {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  display: flex; flex-direction: column; gap: var(--brand-space-1);
+  padding: var(--brand-space-5) var(--brand-space-4) var(--brand-space-4);
+  background: linear-gradient(180deg, transparent 0, color-mix(in srgb, var(--brand-scrim-cut) 60%, transparent) 45%, var(--brand-scrim-cut) 100%);
+}
+.cf-gp-club { display: flex; align-items: center; gap: var(--brand-space-2); min-width: 0; color: var(--brand-ink-muted); font: 600 var(--brand-type-caption-size) / 1.2 var(--brand-font-sans); }
+.cf-gp-club > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cf-gp-logo {
+  width: 24px; height: 24px; flex-shrink: 0; display: grid; place-items: center; overflow: hidden;
+  border-radius: var(--brand-radius-mark); background: var(--brand-surface-raised); color: var(--brand-ink);
+  font: 800 var(--brand-type-label-size) / 1 var(--brand-font-sans);
+}
+.cf-gp-logo img { width: 100%; height: 100%; object-fit: cover; }
+.cf-gp-title { font: 800 var(--brand-type-heading-size, 20px) / 1.12 var(--brand-font-sans); color: var(--brand-ink); }
+.cf-gp-hint { font: 500 var(--brand-type-caption-size) / 1.3 var(--brand-font-sans); color: var(--brand-ink-muted); }
