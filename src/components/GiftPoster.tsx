@@ -5,8 +5,8 @@ import './GiftPoster.css';
  * Подарок формы — постер 2.0 (тот же вид, что подарок в приложении Loot Arena: App2GiftPoster). Гость оставляет заявку
  * и потом находит этот подарок в инвентаре приложения — карточка должна выглядеть одинаково.
  *
- * Чего у формы нет по сравнению с приложением: «Стиля клуба» (цвет света, узор, маскот) — свет берётся из цвета
- * формы, персонаж — фирменный волк Loot Arena; фото товара-подарка — вместо фото в плитке название товара.
+ * Чего у формы нет по сравнению с приложением: «Стиля клуба» (цвет света, узор) — свет берётся из цвета формы;
+ * фото товара-подарка — вместо фото предмет из набора наград и название товара в плитке.
  */
 type Kind = 'amount' | 'name';
 
@@ -29,6 +29,18 @@ export const giftAmountOf = (gift: LeadGift, currency?: string): { value: string
     if (type === 'BONUSES' && /^бонус/i.test(parsed.unit)) return { value: parsed.value, unit: 'Б' };
     if (type === 'MONEY' && /^(руб|₽)/i.test(parsed.unit)) return { value: parsed.value, unit: CURRENCY_SIGN[currency || 'RUB'] || '₽' };
     return parsed;
+};
+
+/**
+ * Предмет награды — вырезанный 3D-арт из набора наград приложения (lootarena-app public/brand/series/cut, те же
+ * файлы, что на постерах подарков): бонусы — капсула, деньги — свой арт, кейс — сундук, остальное — подарочный бокс.
+ */
+const CASE_RE = /(кейс|case|сундук|контейнер|loot\s*box|pack|пак\b)/i;
+export const giftArtOf = (gift: LeadGift): string => {
+    const type = String(gift.reward_type || '').toUpperCase();
+    const k = type === 'BONUSES' ? 'bonus' : type === 'MONEY' ? 'money'
+        : type === 'ROLL' || type === 'RANDOM' || CASE_RE.test(gift.reward_text || '') ? 'case-closed' : 'product';
+    return `/brand/series/cut/reward-${k}.webp`;
 };
 
 export const giftTitleOf = (gift: LeadGift): string =>
@@ -62,7 +74,7 @@ const GiftPoster: React.FC<Props> = ({ gift, clubName, clubLogo, accent, currenc
         // data-ad-area: карточка подарка — часть рекламы, по ней считается площадь надписи о вреде энергетиков.
         <div data-ad-area="gift" className={`cf-gp surface-always-dark animate-fade-in${className ? ` ${className}` : ''}`} style={{ '--club': accent } as React.CSSProperties}>
             <span className="cf-gp-glow" aria-hidden="true" />
-            <img className="cf-gp-art" src="/brand/series/wolf-headset-wave.webp" alt="" draggable={false} />
+            <img className="cf-gp-art" src={giftArtOf(gift)} alt="" draggable={false} />
             <span className="cf-gp-plate" aria-hidden="true">
                 <span className="cf-gp-tile" />
                 {amount ? (

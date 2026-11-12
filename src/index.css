@@ -14,6 +14,13 @@
   font-display: swap;
 }
 
+/* Шрифт «Плитки» подключён пакетом @fontsource-variable под именем «Geologica Variable», а токен документа называет
+   семейство «Geologica» — без этой строки всё, что набрано var(--brand-font-sans) (постер подарка, плашки), уходило
+   в системный шрифт. Значение токена здесь — то же семейство под именем, которое реально загружено. */
+:root, .surface-always-dark, .surface-always-light {
+  --brand-font-sans: 'Geologica Variable', 'Geologica', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
 /* Цвета Tailwind — ссылки на «Плитку», своих значений нет. */
 @theme inline {
   --font-sans: 'Geologica Variable', 'Geologica', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -371,3 +378,11 @@
 
 /* Тёмные темы «Плитки»: общие стеклянные карточки — на surface, а не на чистом чёрном. */
 .lf-page:not([data-theme='light']) .glass { background: var(--lf-surface); border-color: var(--lf-line); }
+
+/* Плашка превью ЕРП (/__preview): тихая полоса сверху, поверх страницы не ложится. */
+.lf-preview-note {
+  position: sticky; top: 0; z-index: 40; display: flex; gap: var(--brand-space-2); align-items: baseline; flex-wrap: wrap;
+  padding: var(--brand-space-2) var(--brand-space-4); background: var(--brand-surface-raised); color: var(--brand-ink-muted);
+  border-bottom: 1px solid var(--brand-line); font: 500 var(--brand-type-label-size) / 1.3 var(--brand-font-sans);
+}
+.lf-preview-note b { color: var(--brand-ink); font-weight: 700; }

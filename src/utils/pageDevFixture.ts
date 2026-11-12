@@ -47,7 +47,7 @@ export const devOfflineAnswer = (action: string): unknown => {
                 name: 'Убежище 78 Легенда',
                 address: 'Санкт-Петербург, Октябрьская наб., 10',
                 workingHours: 'Круглосуточно',
-                avatarUrl: null,
+                avatarUrl: 'https://s3.lootarena.ru/1776148712030_Logo 2_thumb.png',
                 coverUrl: null,
                 socialLinks: { vk: 'https://vk.com/', telegram: 'https://t.me/' },
                 currency: 'RUB',

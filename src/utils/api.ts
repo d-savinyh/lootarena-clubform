@@ -195,10 +195,13 @@ export interface SubmitResult {
 
 // Только разработка: `?dev_offline` — страница без сети (см. pageDevFixture.devOfflineAnswer).
 const DEV_OFFLINE = import.meta.env.DEV && typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('dev_offline');
+// Превью в ЕРП (/__preview): страница ничего не пишет на сервер — заявка «принимается» без отправки, просмотров нет.
+const IS_PREVIEW_PAGE = typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/__preview';
 
 // Вызов публичного n8n webhook
 async function callPublicAPI(action: string, data: Record<string, any> = {}): Promise<any> {
     if (DEV_OFFLINE) return (await import('./pageDevFixture')).devOfflineAnswer(action);
+    if (IS_PREVIEW_PAGE && action !== 'get_landing') return action === 'submit_lead' ? { ok: true, giftStatus: 'inventory' } : { ok: true };
     const response = await fetch(`${API_URL}/public/clubform`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -336,7 +339,7 @@ export function trackEvent(
     ctx: EvtCtx = {},
     useBeacon = false,
 ): void {
-    if (!formId || DEV_OFFLINE) return;
+    if (!formId || DEV_OFFLINE || IS_PREVIEW_PAGE) return;
     const body = JSON.stringify({
         form_id: formId,
         event_type: eventType,

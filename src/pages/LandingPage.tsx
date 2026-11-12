@@ -13,6 +13,7 @@ import { readClickIds, metrikaClientId } from '../utils/clickIds';
 import { CONSENT_VERSION } from '../utils/consent';
 import { readConfirmedAge, writeConfirmedAge } from '../utils/ageGate';
 import GiftPoster from '../components/GiftPoster';
+import { IS_PREVIEW, startPreview, subscribePreview } from '../utils/preview';
 
 interface LandingPageProps {
     slug: string;
@@ -115,6 +116,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug, link }) => {
     const [clickIds] = useState(() => readClickIds(slug, params));
 
     useEffect(() => {
+        // Превью в ЕРП: черновик приходит сообщением и обновляется на каждую правку — без просмотров и событий.
+        if (IS_PREVIEW) {
+            const stopListen = startPreview((liveSlug) => getLandingData(liveSlug));
+            const stopSub = subscribePreview((l) => { if (l) { setLanding(l); setIsLoading(false); } });
+            return () => { stopSub(); stopListen(); };
+        }
         const load = async () => {
             try {
                 let stored: string | undefined;

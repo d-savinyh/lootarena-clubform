@@ -1,5 +1,7 @@
 import { Suspense, lazy } from 'react'
 import LandingPage from './pages/LandingPage'
+import PreviewNote from './components/PreviewNote'
+import { IS_PREVIEW } from './utils/preview'
 import './index.css'
 
 // Страница турнира грузится отдельным чанком: стартовый бандл лид-форм не растёт (check:bundle).
@@ -17,6 +19,15 @@ function App() {
       <Suspense fallback={<div className="min-h-screen" />}>
         <TournamentPage token={t[1]} />
       </Suspense>
+    )
+  }
+  // Превью в ЕРП: черновик формы приходит сообщением от мастера, на сервер страница ничего не пишет.
+  if (IS_PREVIEW) {
+    return (
+      <>
+        <PreviewNote />
+        <LandingPage slug="__preview" />
+      </>
     )
   }
   // Простой роутинг: /<slug формы> или /<slug формы>/<код канала> — короткая ссылка канала (04.11.2026):

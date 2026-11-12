@@ -3,6 +3,7 @@ import { getPhoneFormat, applyMask, phoneDigits, isValidPhone } from '../utils/p
 import ConsentSheet from './ConsentSheet';
 import { PRIVACY_URL, type ForeignTracker } from '../utils/consent';
 import type { LandingOperator } from '../utils/api';
+import { IS_PREVIEW } from '../utils/preview';
 
 interface LeadFormProps {
     brandColor: string;
@@ -122,7 +123,8 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, currency, onSubmit, isL
                     autoComplete="tel"
                     placeholder={fmt.placeholder}
                     required
-                    autoFocus
+                    // В превью ЕРП (/__preview) без автофокуса: фрейм иначе прокручивает страницу к полю и забирает фокус у мастера.
+                    autoFocus={!IS_PREVIEW}
                     value={phone}
                     onChange={handlePhoneChange}
                     onFocus={handlePhoneFocus}
