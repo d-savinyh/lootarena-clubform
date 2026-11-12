@@ -5,6 +5,15 @@
 /* Токены «Плитки» (--brand-*): цвета, радиусы, длительности и кривые страницы берутся только отсюда. */
 @import "./brand.css";
 
+/* Цифры Loot Arena — крупные числа (подарок, «свободно»), как в приложении 2.0; файл — копия из lootarena-app. */
+@font-face {
+  font-family: "Loot Arena Digits";
+  src: url("/brand/fonts/LootArenaDigits-ExtraBold.woff2") format("woff2");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Цвета Tailwind — ссылки на «Плитку», своих значений нет. */
 @theme inline {
   --font-sans: 'Geologica Variable', 'Geologica', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -285,6 +294,15 @@
 }
 .lf-h2 { margin: 0; font-size: 22px; font-weight: 600; line-height: 1.2; }
 .lf-muted { color: var(--lf-muted); }
+/* Числа — ровными цифрами; крупные (28 px и больше) — шрифтом цифр Loot Arena, как в приложении 2.0. */
+.lf-num { font-weight: 700; font-variant-numeric: tabular-nums; }
+.lf-big { font-family: "Loot Arena Digits", var(--font-sans); font-weight: 800; line-height: 1; }
+/* Тёмный островок на светлой странице (карта): палитра страницы пересчитывается от тёмных токенов. */
+.lf-dark-island {
+  --lf-surface: var(--brand-surface); --lf-raised: var(--brand-surface-raised); --lf-line: var(--brand-line);
+  --lf-ink: var(--brand-ink); --lf-muted: var(--brand-ink-muted);
+  background: var(--lf-surface); color: var(--lf-ink); border-color: var(--lf-line);
+}
 .lf-kicker { font-size: 14px; font-weight: 500; color: var(--lf-muted); }
 .lf-label { font-size: 12px; font-weight: 600; color: var(--lf-muted); }
 .lf-btn {
@@ -300,13 +318,38 @@
 .lf-scroll-x::-webkit-scrollbar { display: none; }
 .lf-scroll-x > * { scroll-snap-align: start; flex-shrink: 0; }
 
-/* Маркер клуба на карте: логотип в зелёном кольце со свечением (как на lootarena.ru/gamers). */
-.lf-map-marker {
-  width: 52px; height: 52px; border-radius: var(--brand-radius-pill); background: var(--brand-night); border: 3px solid var(--brand-green);
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 0 10px var(--brand-bp-lit-base), 0 0 36px var(--brand-green-glow);
+/* Значок клуба на карте — как в приложении 2.0 (App2City.css .a2-cmap-pin + App2.css .a2-tile): плитка знака −5°
+   (public/brand/tile.svg), зелёная кайма, внутри — логотип на поднятой поверхности; под ним — название пилюлей. */
+.lf-pin { display: grid; justify-items: center; gap: var(--brand-space-1); pointer-events: none; }
+.lf-pin-tile {
+  position: relative; display: block; width: 56px; aspect-ratio: 122 / 123;
+  -webkit-mask: url('/brand/tile.svg') center / contain no-repeat; mask: url('/brand/tile.svg') center / contain no-repeat;
+  background: var(--brand-green);
+  filter: drop-shadow(0 var(--brand-space-1) var(--brand-space-2) var(--brand-scrim));
 }
-.lf-map-marker img { width: 32px; height: 32px; object-fit: contain; border-radius: var(--brand-radius-pill); }
+.lf-pin-in {
+  position: absolute; inset: 3px; display: grid; place-items: center; overflow: hidden;
+  -webkit-mask: url('/brand/tile.svg') center / contain no-repeat; mask: url('/brand/tile.svg') center / contain no-repeat;
+  background: var(--brand-surface-raised); color: var(--brand-ink);
+}
+.lf-pin-in > * { grid-area: 1 / 1; }
+.lf-pin-in img { width: 100%; height: 100%; padding: 8%; object-fit: contain; }
+.lf-pin-in b { font: 700 22px / 1 var(--brand-font-sans); }
+.lf-pin-name {
+  max-width: 180px; padding: 2px var(--brand-space-2); border-radius: var(--brand-radius-pill);
+  background: var(--brand-surface-glass); color: var(--brand-ink);
+  font: 600 var(--brand-type-label-size) / 1.2 var(--brand-font-sans); text-align: center;
+}
+
+/* Полоса мест зоны — как «свободно из N» в окне зоны приложения (App2ZoneSheet SeatStrip): место — плитка −5°,
+   свободное зелёное, занятое белёсое (токены seat-* документа). */
+.lf-seats { display: flex; flex-wrap: wrap; gap: 4px; }
+.lf-seat {
+  display: block; width: var(--seat, 18px); aspect-ratio: 122 / 123;
+  -webkit-mask: url('/brand/tile.svg') center / contain no-repeat; mask: url('/brand/tile.svg') center / contain no-repeat;
+  background: var(--brand-seat-busy);
+}
+.lf-seat.is-free { background: var(--brand-seat-free); }
 
 /* Светлая тема: общие компоненты формы (OfferCard, LeadForm, ClubPicker) нарисованы под тёмный фон
    классами text-white/* и .glass. Переопределяем их только внутри светлой страницы. */
@@ -322,7 +365,9 @@
 .lf-page[data-theme='light'] .text-red-400 { color: var(--brand-danger); }
 .lf-page[data-theme='light'] .input-apple { background: var(--lf-raised); border-color: var(--lf-line); color: var(--lf-ink); }
 .lf-page[data-theme='light'] .input-apple::placeholder { color: var(--brand-ink-subtle); }
-.lf-page[data-theme='light'] .input-apple:focus { border-color: var(--lf-muted); box-shadow: 0 0 0 4px var(--brand-select-fill); }
+.lf-page[data-theme='light'] .input-apple:focus { border-color: var(--brand-green-ink); box-shadow: 0 0 0 4px var(--brand-select-fill); }
+/* У поля фокус уже виден рамкой и подсветкой — второй контур страницы не нужен. */
+.lf-page .input-apple:focus-visible { outline: none; }
 
 /* Тёмные темы «Плитки»: общие стеклянные карточки — на surface, а не на чистом чёрном. */
 .lf-page:not([data-theme='light']) .glass { background: var(--lf-surface); border-color: var(--lf-line); }

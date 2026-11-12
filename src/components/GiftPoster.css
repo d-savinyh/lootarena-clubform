@@ -2,13 +2,6 @@
    свет цвета клуба, фирменный персонаж (волк в гарнитуре) справа показывает на подарок, подарок крупно в плитке «Плитки»
    с наклоном −5°, внутри ровно — сумма цифрами Loot Arena; срок — наклейкой; клуб с логотипом и название — снизу.
    Гость после заявки видит тот же подарок в приложении, поэтому вид один. Карточка тёмная в любой теме страницы. */
-@font-face {
-  font-family: "Loot Arena Digits";
-  src: url("/brand/fonts/LootArenaDigits-ExtraBold.woff2") format("woff2");
-  font-weight: 800;
-  font-style: normal;
-  font-display: swap;
-}
 
 .cf-gp {
   position: relative;

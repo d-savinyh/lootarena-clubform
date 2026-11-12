@@ -1,92 +1,76 @@
-// Карта клуба — тот же стиль «Loot Arena Dark», что на странице для игроков lootarena.ru/gamers
-// (lootarena-landing/components/gamers/GamersMap.tsx): MapLibre + векторные тайлы OpenFreeMap.
+// Карта клуба — как в приложении Loot Arena 2.0 (карта клубов, полоса «Клубы»): MapLibre + векторные тайлы
+// OpenFreeMap, стиль «Loot Arena City», клуб — его логотип в плитке «Плитки» с зелёной каймой.
 // Модуль грузится ДИНАМИЧЕСКИ, только когда блок «Карта» дошёл до экрана: maplibre-gl тяжёлый
 // (~250 КБ gzip) и стартовому бандлу формы не нужен.
-import maplibregl, { type FilterSpecification, type StyleSpecification } from 'maplibre-gl';
+import maplibregl, { type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const TILES = 'https://tiles.openfreemap.org';
 
-interface Palette {
-    bg: string; water: string; land: string; park: string; building: string;
-    road1: string; road2: string; road3: string; roadShadow: string; label: string; halo: string; accentLine: number;
-}
-
-const DARK: Palette = {
-    bg: '#050607', water: '#061215', land: '#08160e', park: '#0a2818', building: '#22262a',
-    road1: '#52615a', road2: '#3b4543', road3: '#252b30', roadShadow: '#050607', label: '#9ba7a1', halo: '#050607', accentLine: 0.34,
-};
-const LIGHT: Palette = {
-    bg: '#eef2ec', water: '#cfe0e6', land: '#e3ecdf', park: '#d3e8cf', building: '#e4e8e1',
-    road1: '#ffffff', road2: '#ffffff', road3: '#f7f9f6', roadShadow: '#eef2ec', label: '#525851', halo: '#eef2ec', accentLine: 0,
-};
-
-const roads: FilterSpecification = ['all', ['==', ['geometry-type'], 'LineString'], ['!', ['in', ['get', 'class'], ['literal', ['path', 'service', 'track']]]]];
-
-const styleFor = (light: boolean): StyleSpecification => {
-    const c = light ? LIGHT : DARK;
-    return {
-        version: 8,
-        glyphs: `${TILES}/fonts/{fontstack}/{range}.pbf`,
-        sources: { o: { type: 'vector', url: `${TILES}/planet` } },
-        layers: [
-            { id: 'bg', type: 'background', paint: { 'background-color': c.bg } },
-            { id: 'water', type: 'fill', source: 'o', 'source-layer': 'water', paint: { 'fill-color': c.water } },
-            { id: 'landcover', type: 'fill', source: 'o', 'source-layer': 'landcover', paint: { 'fill-color': c.land, 'fill-opacity': 0.78 } },
-            { id: 'park', type: 'fill', source: 'o', 'source-layer': 'park', paint: { 'fill-color': c.park, 'fill-opacity': 0.62 } },
-            {
-                id: 'building', type: 'fill-extrusion', source: 'o', 'source-layer': 'building', minzoom: 13,
-                paint: {
-                    'fill-extrusion-color': c.building,
-                    'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 10],
-                    'fill-extrusion-opacity': light ? 0.75 : 0.9,
-                    'fill-extrusion-vertical-gradient': true,
-                },
+/**
+ * Стиль карты — тот же «Loot Arena City», что у карты клубов в приложении 2.0 (lootarena-app/utils/arenaMapStyle.ts):
+ * карта в приложении всегда тёмная (картинка — на тёмном), поэтому и здесь одна тёмная схема для всех тем страницы.
+ * Цвета — значения стиля приложения 1:1: это данные карты для движка MapLibre, а не цвета интерфейса.
+ */
+const arenaMapStyle: StyleSpecification = {
+    version: 8,
+    name: 'Loot Arena City',
+    glyphs: `${TILES}/fonts/{fontstack}/{range}.pbf`,
+    sources: {
+        openmaptiles: {
+            type: 'vector',
+            url: `${TILES}/planet`,
+            attribution: '<a href="https://openfreemap.org" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
+        },
+    },
+    layers: [
+        { id: 'background', type: 'background', paint: { 'background-color': '#050706' } },
+        { id: 'water', type: 'fill', source: 'openmaptiles', 'source-layer': 'water', paint: { 'fill-color': '#071416' } },
+        { id: 'landcover', type: 'fill', source: 'openmaptiles', 'source-layer': 'landcover', paint: { 'fill-color': '#09150e', 'fill-opacity': 0.8 } },
+        { id: 'park', type: 'fill', source: 'openmaptiles', 'source-layer': 'park', paint: { 'fill-color': '#0b2115', 'fill-opacity': 0.72 } },
+        {
+            id: 'building', type: 'fill', source: 'openmaptiles', 'source-layer': 'building', minzoom: 12,
+            paint: { 'fill-color': '#202522', 'fill-opacity': 0.82, 'fill-outline-color': '#303832' },
+        },
+        {
+            id: 'road-shadow', type: 'line', source: 'openmaptiles', 'source-layer': 'transportation',
+            filter: ['==', ['geometry-type'], 'LineString'],
+            paint: { 'line-color': '#030504', 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.6, 12, 5, 16, 11], 'line-opacity': 0.88 },
+        },
+        {
+            id: 'road-main', type: 'line', source: 'openmaptiles', 'source-layer': 'transportation',
+            filter: ['==', ['geometry-type'], 'LineString'],
+            paint: {
+                'line-color': ['match', ['get', 'class'], ['motorway', 'trunk', 'primary'], '#52615a', ['secondary', 'tertiary'], '#38433e', '#252b28'],
+                'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.7, 12, 2.3, 16, 5.5],
+                'line-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0.44, 13, 0.78],
             },
-            {
-                id: 'road-shadow', type: 'line', source: 'o', 'source-layer': 'transportation', filter: roads,
-                paint: { 'line-color': c.roadShadow, 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 5.2, 16, 12], 'line-opacity': 0.9 },
+        },
+        {
+            id: 'road-label', type: 'symbol', source: 'openmaptiles', 'source-layer': 'transportation_name', minzoom: 11,
+            layout: {
+                'symbol-placement': 'line',
+                'text-field': ['coalesce', ['get', 'name:ru'], ['get', 'name'], ['get', 'ref']],
+                'text-font': ['Noto Sans Bold'],
+                'text-size': ['interpolate', ['linear'], ['zoom'], 11, 9, 15, 12],
+                'text-padding': 2,
             },
-            {
-                id: 'road', type: 'line', source: 'o', 'source-layer': 'transportation', filter: roads,
-                paint: {
-                    'line-color': ['match', ['get', 'class'], ['motorway', 'trunk', 'primary'], c.road1, ['secondary', 'tertiary'], c.road2, c.road3],
-                    'line-width': ['interpolate', ['linear'], ['zoom'], 12, 2.3, 16, 6],
-                    'line-opacity': 0.9,
-                },
-            },
-            {
-                id: 'road-accent', type: 'line', source: 'o', 'source-layer': 'transportation',
-                filter: ['match', ['get', 'class'], ['motorway', 'trunk', 'primary'], true, false],
-                paint: { 'line-color': '#30D158', 'line-width': 1.7, 'line-opacity': c.accentLine, 'line-blur': 0.8 },
-            },
-            {
-                id: 'road-label', type: 'symbol', source: 'o', 'source-layer': 'transportation_name', minzoom: 11,
-                layout: {
-                    'symbol-placement': 'line',
-                    'text-field': ['coalesce', ['get', 'name:ru'], ['get', 'name']],
-                    'text-font': ['Noto Sans Bold'],
-                    'text-size': 12,
-                },
-                paint: { 'text-color': c.label, 'text-halo-color': c.halo, 'text-halo-width': 1.6 },
-            },
-        ],
-    };
+            paint: { 'text-color': '#98a39d', 'text-halo-color': '#050706', 'text-halo-width': 1.5, 'text-opacity': 0.82 },
+        },
+    ],
 };
 
 export interface ClubMapHandle { destroy: () => void }
 
 /** Рисует карту в контейнере. Ошибка WebGL/тайлов — исключение: блок покажет адрес без карты. */
 export function mountClubMap(el: HTMLElement, opts: {
-    lat: number; lng: number; light: boolean; logoUrl?: string; clubName: string; onError: () => void;
+    lat: number; lng: number; logoUrl?: string; clubName: string; onError: () => void;
 }): ClubMapHandle {
     const map = new maplibregl.Map({
         container: el,
-        style: styleFor(opts.light),
+        style: arenaMapStyle,
         center: [opts.lng, opts.lat],
-        zoom: 14.6,
-        pitch: 40,
-        bearing: -18,
+        zoom: 14.2,
         attributionControl: { compact: true },
         // Палец на телефоне листает страницу, а не карту: двигать карту — двумя пальцами.
         cooperativeGestures: true,
@@ -94,16 +78,32 @@ export function mountClubMap(el: HTMLElement, opts: {
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false, visualizePitch: false }), 'top-right');
 
-    const marker = document.createElement('div');
-    marker.className = 'lf-map-marker';
+    // Значок клуба — как на карте приложения (cityMap.ts → markerEl): логотип в плитке −5° с зелёной каймой
+    // («подписан»), логотипа нет или не загрузился — первая буква; под плиткой — название клуба.
+    const marker = document.createElement('span');
+    marker.className = 'lf-pin';
     marker.setAttribute('role', 'img');
     marker.setAttribute('aria-label', opts.clubName);
+    const tile = document.createElement('span');
+    tile.className = 'lf-pin-tile';
+    const inner = document.createElement('span');
+    inner.className = 'lf-pin-in';
+    const letter = document.createElement('b');
+    letter.textContent = opts.clubName.slice(0, 1).toUpperCase();
+    inner.append(letter);
     if (opts.logoUrl) {
         const img = document.createElement('img');
         img.src = opts.logoUrl;
         img.alt = '';
-        marker.appendChild(img);
+        img.onload = () => letter.remove();
+        img.onerror = () => img.remove();
+        inner.append(img);
     }
+    tile.append(inner);
+    const name = document.createElement('span');
+    name.className = 'lf-pin-name';
+    name.textContent = opts.clubName;
+    marker.append(tile, name);
     new maplibregl.Marker({ element: marker }).setLngLat([opts.lng, opts.lat]).addTo(map);
 
     // Компактная подпись источника карты на узком экране открывается раскрытой и закрывает пол-карты —

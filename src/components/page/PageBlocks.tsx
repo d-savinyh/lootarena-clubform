@@ -5,39 +5,59 @@ import { formatMinutes, formatMoney, freshnessLabel, summarizePrices } from '../
 type Track = (type: string, meta?: Record<string, unknown>) => void;
 
 // ─── Свободно сейчас ──────────────────────────────────────────────────────────
-// Те же цифры, что «Клуб сейчас» в приложении (fn_app_club_load). Зелёный = свободно — во всех темах.
+// Те же цифры, что «Сейчас в клубе» в приложении (fn_app_club_load), и тот же вид, что окно зоны приложения 2.0
+// (App2ZoneSheet): крупное число «свободно из N» и полоса мест-плиток. Зелёный = свободно — во всех темах.
+const seatSize = (total: number) => (total <= 24 ? 18 : total <= 48 ? 14 : 10);
+
+const SeatStrip: React.FC<{ free: number; total: number; label: string }> = ({ free, total, label }) => (
+    <span className="lf-seats" role="img" aria-label={label} style={{ '--seat': `${seatSize(total)}px` } as React.CSSProperties}>
+        {Array.from({ length: Math.max(0, Math.min(total, 96)) }, (_, i) => (
+            <span key={i} className={`lf-seat${i < free ? ' is-free' : ''}`} />
+        ))}
+    </span>
+);
+
 export const FreeNowBlock: React.FC<{ free: NonNullable<LandingPageDesign['free']>; compact?: boolean }> = ({ free, compact }) => {
     const fresh = freshnessLabel(free.updatedAt);
+    const sumFree = free.zones.reduce((acc, z) => acc + Math.max(0, z.available), 0);
+    const sumTotal = free.zones.reduce((acc, z) => acc + Math.max(0, z.total), 0);
     return (
         <section className="lf-card" style={{ padding: 24 }} aria-labelledby="lf-free-h">
-            <div style={{ marginBottom: 6 }}>
-                <h2 id="lf-free-h" className="lf-h2">Свободно сейчас</h2>
-                {fresh && <div className="lf-label" style={{ marginTop: 4 }}>{fresh}</div>}
+            <div className="lf-kicker">Сейчас в клубе</div>
+            <h2 id="lf-free-h" className="lf-h2" style={{ marginTop: 2 }}>Свободно сейчас</h2>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 12 }}>
+                <span className="lf-num lf-big" style={{ fontSize: 46, color: sumFree > 0 ? 'var(--brand-green-ink)' : 'var(--lf-muted)' }}>{sumFree}</span>
+                <span className="lf-kicker">свободно из {sumTotal}</span>
             </div>
-            <div style={compact ? { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginTop: 10 } : undefined}>
-                {free.zones.map((z) => (
-                    compact ? (
-                        <div key={z.name} style={{ padding: 16, borderRadius: 20, background: 'var(--lf-raised)' }}>
-                            <div className="lf-kicker">{z.name}</div>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
-                                <span style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.02em', color: z.available > 0 ? 'var(--lf-free)' : 'var(--lf-muted)' }}>{z.available}</span>
-                                <span className="lf-kicker">из {z.total}</span>
+            {fresh && <div className="lf-label" style={{ marginTop: 2 }}>{fresh}</div>}
+            <div style={compact
+                ? { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginTop: 16 }
+                : { display: 'flex', flexDirection: 'column', marginTop: 12 }}>
+                {free.zones.map((z) => {
+                    const label = `${z.name}: свободно ${z.available} из ${z.total}`;
+                    const count = (
+                        <span style={{ whiteSpace: 'nowrap', fontSize: 15, fontWeight: 700, color: z.available > 0 ? 'var(--lf-ink)' : 'var(--lf-muted)' }}>
+                            {z.available > 0 ? <><span className="lf-num" style={{ color: 'var(--brand-green-ink)' }}>{z.available}</span> из {z.total}</> : 'всё занято'}
+                        </span>
+                    );
+                    return compact ? (
+                        <div key={z.name} style={{ padding: 16, borderRadius: 'var(--brand-radius-inner)', background: 'var(--lf-raised)', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                                <span className="lf-kicker" style={{ color: 'var(--lf-ink)', overflowWrap: 'anywhere' }}>{z.name}</span>
+                                {count}
                             </div>
+                            <SeatStrip free={z.available} total={z.total} label={label} />
                         </div>
                     ) : (
-                        <div key={z.name} style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 44, borderTop: '1px solid var(--lf-line)' }}>
-                            <span style={{ flexGrow: 1, fontSize: 17 }}>{z.name}</span>
-                            <span style={{
-                                height: 28, padding: '0 12px', borderRadius: 999, display: 'inline-flex', alignItems: 'center',
-                                fontSize: 15, fontWeight: 700,
-                                background: z.available > 0 ? 'var(--lf-free)' : 'var(--lf-busy)',
-                                color: z.available > 0 ? 'var(--lf-on-free)' : 'var(--lf-muted)',
-                            }}>
-                                {z.available > 0 ? `${z.available} из ${z.total}` : 'всё занято'}
-                            </span>
+                        <div key={z.name} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 0', borderTop: '1px solid var(--lf-line)' }}>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                                <span style={{ flexGrow: 1, fontSize: 17, minWidth: 0 }}>{z.name}</span>
+                                {count}
+                            </div>
+                            <SeatStrip free={z.available} total={z.total} label={label} />
                         </div>
-                    )
-                ))}
+                    );
+                })}
             </div>
         </section>
     );
@@ -53,12 +73,12 @@ export const PricesBlock: React.FC<{ prices: NonNullable<LandingPageDesign['pric
         <section className="lf-card" style={{ padding: 24 }} aria-labelledby="lf-prices-h">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
                 <h2 id="lf-prices-h" className="lf-h2">Цены</h2>
-                <span className="lf-label">из кассы клуба</span>
+                <span className="lf-label">обновляются сами</span>
             </div>
             {zones.map((z) => (
                 <div key={z.zone} style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '10px 0', borderTop: '1px solid var(--lf-line)' }}>
                     <span style={{ flexGrow: 1, fontSize: 17 }}>{z.zone}</span>
-                    <span style={{ fontSize: 17, fontWeight: 700, textAlign: 'right' }}>
+                    <span className="lf-num" style={{ fontSize: 17, textAlign: 'right' }}>
                         {z.hourFrom !== null
                             ? `от ${formatMoney(z.hourFrom, cur)}/ч`
                             : z.packetFrom ? `от ${formatMoney(z.packetFrom.price, cur)} за ${formatMinutes(z.packetFrom.minutes)}` : ''}
@@ -133,7 +153,7 @@ export const GalleryBlock: React.FC<{ images: string[]; theme: PageTheme; deskto
     const show = (i: number) => { setOpen(i); onEvent?.('page_gallery_open', { index: i }); };
     const img = (src: string, i: number, style: React.CSSProperties) => (
         <button key={src + i} type="button" onClick={() => show(i)} aria-label={`Открыть фото ${i + 1}`}
-            style={{ padding: 0, border: 0, background: 'var(--lf-raised)', borderRadius: 20, overflow: 'hidden', cursor: 'zoom-in', ...style }}>
+            style={{ padding: 0, border: 0, background: 'var(--lf-raised)', borderRadius: 'var(--brand-radius-inner)', overflow: 'hidden', cursor: 'zoom-in', ...style }}>
             <img src={src} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         </button>
     );
@@ -148,7 +168,7 @@ export const GalleryBlock: React.FC<{ images: string[]; theme: PageTheme; deskto
         // Лента с листанием — продолжение «фото на весь экран».
         body = (
             <div className="lf-scroll-x" style={{ marginRight: -16, paddingRight: 16 }}>
-                {images.map((src, i) => img(src, i, { width: 220, height: 300, borderRadius: 24 }))}
+                {images.map((src, i) => img(src, i, { width: 220, height: 300, borderRadius: 'var(--brand-radius-panel)' }))}
             </div>
         );
     } else {
@@ -160,11 +180,11 @@ export const GalleryBlock: React.FC<{ images: string[]; theme: PageTheme; deskto
                 {images.slice(1, 4).map((src, i) => (
                     i === 2 && rest > 0 ? (
                         <button key={src} type="button" onClick={() => show(3)} aria-label={`Ещё ${rest} фото`}
-                            style={{ position: 'relative', padding: 0, border: 0, borderRadius: 14, overflow: 'hidden', cursor: 'zoom-in' }}>
+                            style={{ position: 'relative', padding: 0, border: 0, borderRadius: 'var(--brand-radius-small)', overflow: 'hidden', cursor: 'zoom-in' }}>
                             <img src={src} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                             <span style={{ position: 'absolute', inset: 0, background: 'color-mix(in srgb, var(--brand-night) 55%, transparent)', color: 'var(--brand-on-photo)', fontSize: 17, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+{rest}</span>
                         </button>
-                    ) : img(src, i + 1, { borderRadius: 14 })
+                    ) : img(src, i + 1, { borderRadius: 'var(--brand-radius-small)' })
                 ))}
             </div>
         );
@@ -225,7 +245,7 @@ export const MapBlock: React.FC<{
                     if (cancelled || !boxRef.current) return;
                     try {
                         handle = mountClubMap(boxRef.current, {
-                            lat: map.lat, lng: map.lng, light: theme === 'light', logoUrl, clubName, onError: () => setFailed(true),
+                            lat: map.lat, lng: map.lng, logoUrl, clubName, onError: () => setFailed(true),
                         });
                     } catch { setFailed(true); }
                 })
@@ -237,12 +257,13 @@ export const MapBlock: React.FC<{
         }, { rootMargin: '300px' });
         io.observe(el);
         return () => { cancelled = true; io.disconnect(); handle?.destroy(); };
-    }, [map.lat, map.lng, theme, logoUrl, clubName]);
+    }, [map.lat, map.lng, logoUrl, clubName]);
 
     const route = `https://yandex.ru/maps/?rtext=~${map.lat},${map.lng}&rtt=auto`;
     return (
-        <section aria-labelledby="lf-map-h" className="lf-card" style={{ overflow: 'hidden', padding: 0 }}>
-            {!failed && <div ref={boxRef} style={{ height: 260, background: 'var(--lf-raised)' }} />}
+        // Карта в приложении всегда тёмная (картинка — на тёмном): карточка карты — тёмный островок в любой теме страницы.
+        <section aria-labelledby="lf-map-h" className={`lf-card${theme === 'light' ? ' surface-always-dark lf-dark-island' : ''}`} style={{ overflow: 'hidden', padding: 0 }}>
+            {!failed && <div ref={boxRef} style={{ height: 280, background: 'var(--brand-night)' }} />}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 16px 16px 20px', flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 1 180px', minWidth: 0 }}>
                     <h2 id="lf-map-h" style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{address || clubName}</h2>

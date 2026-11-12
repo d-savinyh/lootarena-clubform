@@ -13,7 +13,8 @@ export const pageDevFixture = (theme: string) => ({
         'https://s3.lootarena.ru/uploads/images/2026/06/1782471782669_vj1dwb_full.webp',
         'https://s3.lootarena.ru/uploads/images/2026/06/1782680718507_639jlz_full.webp',
     ],
-    video: null,
+    // Видео — только постер (файл не грузится до нажатия: preload=none), чтобы блок был виден в проверке вида.
+    video: { url: 'https://s3.lootarena.ru/uploads/videos/dev-fixture-club.mp4', poster: 'https://s3.lootarena.ru/uploads/images/2026/06/1782471892952_fmffgb_full.webp' },
     free: {
         updatedAt: new Date(Date.now() - 3 * 60000).toISOString(),
         zones: [
