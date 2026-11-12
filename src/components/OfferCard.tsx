@@ -18,19 +18,9 @@ interface OfferCardProps {
 const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge, brandColor, isDesktop, healthWarning, warningFitKey }) => {
     return (
         <div className="relative animate-slide-up-delay-1">
-            {/* Фоновый glow */}
-            <div
-                className="absolute -inset-2 rounded-[28px] opacity-15 blur-2xl animate-glow-pulse"
-                style={{ backgroundColor: brandColor }}
-            />
 
             {/* Карточка. data-ad-area — площадь рекламы для надписи о вреде энергетиков (HealthWarning). */}
             <div data-ad-area="offer" className={`relative glass rounded-[28px] overflow-hidden ${isDesktop ? 'p-8' : 'p-6'}`}>
-                {/* Декоративный градиент */}
-                <div
-                    className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-8"
-                    style={{ backgroundColor: brandColor }}
-                />
 
                 <div className="relative">
                     {/* Бейдж. Пометок «18+» и «0%» нет по решению 15.10.2026 (specs/content-policy.md) */}

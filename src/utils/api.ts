@@ -193,8 +193,12 @@ export interface SubmitResult {
     clubPromoCount?: number;
 }
 
+// Только разработка: `?dev_offline` — страница без сети (см. pageDevFixture.devOfflineAnswer).
+const DEV_OFFLINE = import.meta.env.DEV && typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('dev_offline');
+
 // Вызов публичного n8n webhook
 async function callPublicAPI(action: string, data: Record<string, any> = {}): Promise<any> {
+    if (DEV_OFFLINE) return (await import('./pageDevFixture')).devOfflineAnswer(action);
     const response = await fetch(`${API_URL}/public/clubform`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -332,7 +336,7 @@ export function trackEvent(
     ctx: EvtCtx = {},
     useBeacon = false,
 ): void {
-    if (!formId) return;
+    if (!formId || DEV_OFFLINE) return;
     const body = JSON.stringify({
         form_id: formId,
         event_type: eventType,

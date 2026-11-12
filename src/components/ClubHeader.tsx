@@ -47,10 +47,7 @@ const ClubHeader: React.FC<ClubHeaderProps> = ({ clubName, clubLogo, coverUrl, a
                 ) : (
                     <div
                         className="absolute inset-0"
-                        style={{
-                            background: `linear-gradient(135deg, ${brandColor}15 0%, transparent 60%)`,
-                            backgroundColor: '#0a0a0a',
-                        }}
+                        style={{ backgroundColor: 'var(--brand-surface)' }}
                     />
                 )}
 
@@ -62,11 +59,6 @@ const ClubHeader: React.FC<ClubHeaderProps> = ({ clubName, clubLogo, coverUrl, a
                     }}
                 />
 
-                {/* Декоративный glow */}
-                <div
-                    className="absolute bottom-0 left-0 w-96 h-96 rounded-full blur-[120px] opacity-[0.08]"
-                    style={{ backgroundColor: brandColor }}
-                />
 
                 {/* Контент внизу */}
                 <div className="absolute bottom-0 left-0 right-0 p-10 pb-12">

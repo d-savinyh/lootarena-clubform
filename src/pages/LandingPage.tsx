@@ -12,6 +12,7 @@ import { solveCaptcha } from '../utils/captcha';
 import { readClickIds, metrikaClientId } from '../utils/clickIds';
 import { CONSENT_VERSION } from '../utils/consent';
 import { readConfirmedAge, writeConfirmedAge } from '../utils/ageGate';
+import GiftIcon from '../components/GiftIcon';
 
 interface LandingPageProps {
     slug: string;
@@ -470,7 +471,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug, link }) => {
         // data-ad-area: карточка подарка — часть рекламы, по ней считается площадь надписи о вреде энергетиков.
         <div data-ad-area="gift" className="glass rounded-2xl p-4 flex items-center gap-3 animate-fade-in">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0" style={{ backgroundColor: `${brandColor}18` }}>
-                {gift.reward_icon || '🎁'}
+                {gift.reward_icon || <GiftIcon className="w-6 h-6" color={brandColor} />}
             </div>
             <div className="min-w-0">
                 <div className="text-[11px] uppercase tracking-wider text-white/35 font-semibold mb-0.5">Подарок за регистрацию</div>
@@ -494,7 +495,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug, link }) => {
         const accent = page.accent || brandColor;
         return (
             <>
-                <Suspense fallback={<div className="min-h-screen" style={{ background: page.theme === 'light' ? '#f4f6f3' : '#0a0b0a' }} />}>
+                <Suspense fallback={<div className={`min-h-screen ${page.theme === 'light' ? 'surface-always-light' : 'surface-always-dark'}`} style={{ background: 'var(--brand-night)' }} />}>
                 <PageLanding
                     page={page}
                     club={club}
@@ -586,13 +587,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug, link }) => {
                     {/* ── Правая колонка: Оффер + Форма ── */}
                     <div className="desktop-right">
                         <div className="w-full max-w-lg space-y-8">
-                            {/* Фоновые декорации */}
-                            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                                <div
-                                    className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full blur-[150px] opacity-[0.03]"
-                                    style={{ backgroundColor: brandColor }}
-                                />
-                            </div>
 
                             {/* Оффер */}
                             <OfferCard
@@ -679,14 +673,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug, link }) => {
     // ══════════════════════════════════════════════
     return (
         <>
-            {/* Фоновые декорации */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div
-                    className="absolute top-[-20%] right-[-10%] w-[400px] h-[400px] rounded-full blur-[120px] opacity-[0.04]"
-                    style={{ backgroundColor: brandColor }}
-                />
-                <div className="absolute bottom-[-10%] left-[-10%] w-[300px] h-[300px] rounded-full blur-[100px] opacity-[0.03] bg-neon-purple" />
-            </div>
 
             {/* Основной контент */}
             <div className="relative min-h-screen flex flex-col">

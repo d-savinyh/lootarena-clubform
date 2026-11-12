@@ -35,3 +35,45 @@ export const pageDevFixture = (theme: string) => ({
     ],
     map: { lat: 59.913636, lng: 30.438143 },
 });
+
+// `?dev_offline` — страница целиком без сети: ответ get_landing и «заявка принята» берутся отсюда,
+// просмотры и события не уходят (иначе локальная проверка вида накручивает просмотры настоящей формы клуба).
+// Комбинируется с `?dev_page=night|photo|light`; без него — прежний вид страницы.
+export const devOfflineAnswer = (action: string): unknown => {
+    if (action === 'get_landing') {
+        return {
+            club: {
+                name: 'Убежище 78 Легенда',
+                address: 'Санкт-Петербург, Октябрьская наб., 10',
+                workingHours: 'Круглосуточно',
+                avatarUrl: null,
+                coverUrl: null,
+                socialLinks: { vk: 'https://vk.com/', telegram: 'https://t.me/' },
+                currency: 'RUB',
+                operator: { name: 'ООО «Пример»', taxLabel: 'ИНН', taxId: '7800000000', address: null },
+            },
+            form: {
+                id: '00000000-0000-4000-8000-000000000001',
+                slug: 'dev-offline',
+                offerType: 'custom',
+                offerTitle: '500 бонусов на первую игру',
+                offerDescription: 'Оставьте номер — бонусы придут в приложение Loot Arena, их можно потратить на игру в клубе.',
+                offerTerms: 'Один подарок на номер. Бонусы сгорают через 14 дней.',
+                offerBadge: 'До конца недели',
+                brandColor: '#F2B118',
+                gift: { reward_type: 'BONUSES', reward_text: '500 бонусов', reward_meta: { bonus_amount: 500 }, expires_in_days: '14' },
+                variant: 'A',
+                coverImage: null,
+                ctaText: null,
+                tracking: null,
+                isNetwork: false,
+                clubs: null,
+                ageGate: null,
+                page: null,
+                linkUtm: null,
+            },
+        };
+    }
+    if (action === 'submit_lead') return { ok: true, giftStatus: 'inventory', clubPromoCount: 3 };
+    return { ok: true };
+};

@@ -27,12 +27,6 @@ const AgeGateScreen: React.FC<AgeGateScreenProps> = ({ clubName, clubLogo, gate,
 
     return (
         <>
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div
-                    className="absolute top-[-20%] right-[-10%] w-[400px] h-[400px] rounded-full blur-[120px] opacity-[0.05]"
-                    style={{ backgroundColor: brandColor }}
-                />
-            </div>
             <main className="relative min-h-screen flex items-center justify-center px-5 py-10">
                 <section
                     className="w-full max-w-md animate-scale-in"

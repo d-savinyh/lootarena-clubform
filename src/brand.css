@@ -1,0 +1,609 @@
+/* Дословная копия styles/brand.css репозитория ЕРП (erp-lootarena, ветка claude/brand-plitka) — токены документа
+   дизайн-системы «Плитка» (https://claude.ai/artifact/SvKHrzKX8qceJm3axhpoCT). Руками не править: новый
+   выпуск документа → пересборка в ЕРП (npm run build:brand) → копия сюда. Темы: :root — тёмная,
+   .surface-always-dark / .surface-always-light — островки страницы формы («Ночь»/«Фото» и «Светлая»). */
+/* Генерируется scripts/brand/build.mjs из design/brand/tokens.json — копии документа дизайн-системы (https://claude.ai/artifact/SvKHrzKX8qceJm3axhpoCT). Руками не править. */
+/* Версия документа: 36 */
+
+:root {
+    --brand-version: 36;
+    --brand-font-sans: "Geologica", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --brand-font-display: "Loot Arena Display", "Geologica", system-ui, sans-serif;
+    --brand-font-digits: "Loot Arena Digits", "Geologica", system-ui, sans-serif;
+    --brand-type-hero-size: 92px;
+    --brand-type-hero-line: 1;
+    --brand-type-hero-weight: 800;
+    --brand-type-hero-tracking: 0;
+    --brand-type-display-size: 76px;
+    --brand-type-display-line: 1;
+    --brand-type-display-weight: 300;
+    --brand-type-display-tracking: -0.035em;
+    --brand-type-numeral-size: 46px;
+    --brand-type-numeral-line: 1;
+    --brand-type-numeral-weight: 800;
+    --brand-type-numeral-tracking: 0;
+    --brand-type-balance-size: 64px;
+    --brand-type-balance-line: 1;
+    --brand-type-balance-weight: 800;
+    --brand-type-balance-tracking: 0;
+    --brand-type-display-phone-size: 34px;
+    --brand-type-display-phone-line: 1.05;
+    --brand-type-display-phone-weight: 300;
+    --brand-type-display-phone-tracking: -0.035em;
+    --brand-type-display-print-size: 64px;
+    --brand-type-display-print-line: 1;
+    --brand-type-display-print-weight: 300;
+    --brand-type-display-print-tracking: -0.035em;
+    --brand-type-shout-size: 64px;
+    --brand-type-shout-line: 1;
+    --brand-type-shout-weight: 800;
+    --brand-type-shout-tracking: 0;
+    --brand-type-title-size: 30px;
+    --brand-type-title-line: 1.1;
+    --brand-type-title-weight: 600;
+    --brand-type-count-size: 28px;
+    --brand-type-count-line: 1;
+    --brand-type-count-weight: 800;
+    --brand-type-count-tracking: 0;
+    --brand-type-heading-size: 22px;
+    --brand-type-heading-line: 1.2;
+    --brand-type-heading-weight: 600;
+    --brand-type-subhead-size: 19px;
+    --brand-type-subhead-line: 1.2;
+    --brand-type-subhead-weight: 600;
+    --brand-type-body-size: 17px;
+    --brand-type-body-line: 1.5;
+    --brand-type-body-weight: 400;
+    --brand-type-button-size: 17px;
+    --brand-type-button-line: 1;
+    --brand-type-button-weight: 700;
+    --brand-type-button-m-size: 15px;
+    --brand-type-button-m-line: 1;
+    --brand-type-button-m-weight: 700;
+    --brand-type-caption-size: 14px;
+    --brand-type-caption-line: 1.3;
+    --brand-type-caption-weight: 500;
+    --brand-type-label-size: 12px;
+    --brand-type-label-line: 1.2;
+    --brand-type-label-weight: 600;
+    --brand-space-half: 2px;
+    --brand-space-1: 4px;
+    --brand-space-2: 8px;
+    --brand-space-3: 12px;
+    --brand-space-4: 16px;
+    --brand-space-5: 24px;
+    --brand-space-6: 32px;
+    --brand-space-7: 48px;
+    --brand-trail-shift-x: 7px;
+    --brand-trail-shift-y: 6px;
+    --brand-trail-echo-x: 9px;
+    --brand-trail-echo-y: 7px;
+    --brand-trail-ref-width: 240px;
+    --brand-page-gutter: 32px;
+    --brand-page-gutter-phone: 16px;
+    --brand-radius-card: 28px;
+    --brand-radius-panel: 24px;
+    --brand-radius-inner: 20px;
+    --brand-radius-button: 18px;
+    --brand-radius-button-m: 14px;
+    --brand-radius-button-s: 12px;
+    --brand-radius-small: 14px;
+    --brand-radius-mark: 3px;
+    --brand-radius-pill: 999px;
+    --brand-radius-erp-card: 20px;
+    --brand-radius-erp-inner: 14px;
+    --brand-radius-erp-control: 12px;
+    --brand-radius-erp-modal: 24px;
+    --brand-shadow-card: 0 30px 80px rgba(0,0,0,0.35);
+    --brand-shadow-item: 0 12px 16px rgba(0,0,0,0.6);
+    --brand-shadow-float: 0 40px 120px rgba(0,0,0,0.55);
+    --brand-shadow-medal: 0 10px 18px rgba(0,0,0,0.55);
+    --brand-tilt: -5deg;
+    --brand-cut: 175deg;
+    --brand-cut-wide: 178deg;
+    --brand-trail-tilt: -3deg;
+    --brand-dur-fast: 250ms;
+    --brand-dur-tap: 120ms;
+    --brand-dur-base: 450ms;
+    --brand-dur-gesture: 520ms;
+    --brand-dur-enter: 1100ms;
+    --brand-dur-press: 3200ms;
+    --brand-dur-breath: 7000ms;
+    --brand-dur-wave: 9000ms;
+    --brand-dur-sheet: 350ms;
+    --brand-dur-count: 700ms;
+    --brand-dur-stagger: 80ms;
+    --brand-dur-pulse: 1800ms;
+    --brand-ease-out: cubic-bezier(.22,.8,.3,1);
+    --brand-ease-spring: cubic-bezier(.3,1.5,.5,1);
+    --brand-ease-inout: cubic-bezier(.45,0,.4,1);
+    --brand-ease-launch: cubic-bezier(.45,.15,.8,.6);
+    --brand-spring-soft: cubic-bezier(.25,1.15,.5,1);
+    --brand-hover-lift: 1.15;
+    --brand-focus-ring-width: 2px;
+    --brand-loader-page: 56px;
+    --brand-loader-block: 32px;
+    --brand-loader-inline: 16px;
+    --brand-modal-w-s: 440px;
+    --brand-modal-w-m: 640px;
+    --brand-modal-w-l: 880px;
+    --brand-modal-w-xl: 1180px;
+    --brand-modal-h: 860px;
+    --brand-icon-s: 16px;
+    --brand-icon-m: 20px;
+    --brand-icon-l: 24px;
+    --brand-icon-stroke: 1.75px;
+    --brand-control-s: 38px;
+    --brand-control-m: 44px;
+    --brand-control-l: 52px;
+    --brand-tile-row: 44px;
+    --brand-tile-card: 74px;
+    --brand-stage-s: 64px;
+    --brand-stage-m: 104px;
+    --brand-stage-l: 132px;
+    --brand-sticker-h: 22px;
+    --brand-badge-s: 18px;
+    --brand-mark-dock: 56px;
+    --brand-dock-h: 70px;
+    --brand-dock-max: 520px;
+    --brand-column-max: 560px;
+    --brand-pair-h: 226px;
+    --brand-game-h: 150px;
+    --brand-game-h-stats: 196px;
+    --brand-game-logo-h: 40px;
+    --brand-shelf: 84px;
+    --brand-shelf-l: 160px;
+    --brand-gear-stage: 72px;
+    --brand-hero-art: 96px;
+    --brand-meet-w: 128px;
+    --brand-plan-max-h: 220px;
+    --brand-code-inline: 0.92em;
+    --brand-night: #0a0b0a;
+    --brand-surface: #121412;
+    --brand-surface-raised: #1a1d1a;
+    --brand-line: #262a26;
+    --brand-ink: #eef2ec;
+    --brand-ink-muted: #9ea39d;
+    --brand-ink-subtle: #979d95;
+    --brand-green: #42ff72;
+    --brand-green-ink: #42ff72;
+    --brand-on-green: #06110a;
+    --brand-rival: #a98bff;
+    --brand-rival-ink: #a98bff;
+    --brand-bridge-teal: #36e6c4;
+    --brand-bridge-blue: #7db0ff;
+    --brand-meet: #75c5b8;
+    --brand-danger: #ff6b5e;
+    --brand-on-danger: #ffffff;
+    --brand-warning: #ffc24a;
+    --brand-info: #7db0ff;
+    --brand-green-glow: rgba(66,255,114,0.4);
+    --brand-green-glow-soft: rgba(66,255,114,0.18);
+    --brand-green-fill: rgba(66,255,114,0.16);
+    --brand-bp-lit: #42ff72;
+    --brand-bp-lit-base: rgba(66,255,114,0.14);
+    --brand-bp-lit-peak: rgba(66,255,114,0.95);
+    --brand-select-fill: rgba(66,255,114,0.16);
+    --brand-on-select: #42ff72;
+    --brand-surface-glass: rgba(18,20,18,0.72);
+    --brand-scrim: rgba(0,0,0,0.6);
+    --brand-scrim-photo: rgba(0,0,0,0.55);
+    --brand-on-photo: #ffffff;
+    --brand-paper: #ffffff;
+    --brand-print-ink: #111210;
+    --brand-print-line: #d9d6cf;
+    --brand-scrim-cut: rgba(10,11,10,0.94);
+    --brand-seat-free: #42ff72;
+    --brand-seat-free-ink: #06110a;
+    --brand-seat-busy: rgba(238,242,236,0.16);
+    --brand-seat-busy-ink: #9ea39d;
+    --brand-seat-booked: #f2c94c;
+    --brand-seat-booked-ink: #06110a;
+    --brand-seat-service-line: #9ea39d;
+    --brand-seat-unknown: rgba(238,242,236,0.08);
+    --brand-seat-offline: #ff6b5e;
+    --brand-ambient-season: #0b1822;
+    --brand-season-accent: #96e4ff;
+    --brand-ambient-brand: #15171d;
+    --brand-ambient-club: #121812;
+    --brand-crystal: #42ff72;
+    --brand-medal-face: #1b1f1b;
+    --brand-medal-rim: #2f352f;
+    --brand-medal-rim-lit: #42ff72;
+    --brand-rarity-common: #a9b8ad;
+    --brand-rarity-rare: #4f9dff;
+    --brand-rarity-epic: #b06bff;
+    --brand-rarity-legendary: #ffb648;
+    --brand-metal-bronze: #d08a4e;
+    --brand-metal-silver: #cdd6de;
+    --brand-metal-gold: #ffc94a;
+    --brand-metal-platinum: #eef3f7;
+    --brand-metal-diamond: #8be4ff;
+    --brand-chart-1: #42ff72;
+    --brand-chart-2: var(--brand-info);
+    --brand-chart-3: #e0a83c;
+    --brand-chart-4: #737a72;
+    --brand-cat-1: #42ff72;
+    --brand-cat-2: #7db0ff;
+    --brand-cat-3: #e0a83c;
+    --brand-cat-4: #36d6b8;
+    --brand-cat-5: #e8875a;
+    --brand-cat-6: #ec7fb4;
+    --brand-cat-7: #6fcbea;
+    --brand-cat-8: #b9dc58;
+    --brand-cat-9: #cfb68a;
+    --brand-cat-10: #9aa59d;
+    --brand-zone-1: #148739;
+    --brand-zone-2: #3f72d4;
+    --brand-zone-3: #9c6d14;
+    --brand-zone-4: #148472;
+    --brand-zone-5: #bf4985;
+    --brand-mission-bg-1-from: #2f63c9;
+    --brand-mission-bg-1-to: #1b3c86;
+    --brand-mission-bg-2-from: #b04f22;
+    --brand-mission-bg-2-to: #83301a;
+    --brand-mission-bg-3-from: #14803a;
+    --brand-mission-bg-3-to: #0b5b36;
+    --brand-mission-bg-4-from: #b0407a;
+    --brand-mission-bg-4-to: #6e2150;
+    --brand-mission-bg-5-from: #8e6512;
+    --brand-mission-bg-5-to: #5e430b;
+    --brand-mission-bg-6-from: #13806f;
+    --brand-mission-bg-6-to: #0c5560;
+    --brand-mission-bg-7-from: #b3261e;
+    --brand-mission-bg-7-to: #771813;
+    --brand-mission-bg-8-from: #80522c;
+    --brand-mission-bg-8-to: #4d311a;
+    --brand-mission-bg-9-from: #1a1d1a;
+    --brand-mission-bg-9-to: #0a0b0a;
+}
+
+:root.light {
+    --brand-night: #f6f5f1;
+    --brand-surface: #ffffff;
+    --brand-surface-raised: #f0eee9;
+    --brand-line: #e3e0d9;
+    --brand-ink: #111210;
+    --brand-ink-muted: #565952;
+    --brand-ink-subtle: #63665e;
+    --brand-green-ink: #0d6e2e;
+    --brand-rival-ink: #5a3fd0;
+    --brand-danger: #a82b1c;
+    --brand-warning: #8a5a00;
+    --brand-info: #2f63c9;
+    --brand-green-glow: rgba(66,255,114,0.35);
+    --brand-green-glow-soft: rgba(66,255,114,0.16);
+    --brand-green-fill: rgba(66,255,114,0.22);
+    --brand-bp-lit: #1d9a42;
+    --brand-bp-lit-base: rgba(29,154,66,0.3);
+    --brand-bp-lit-peak: #1d9a42;
+    --brand-select-fill: #141512;
+    --brand-on-select: #f6f5f1;
+    --brand-surface-glass: rgba(255,255,255,0.72);
+    --brand-scrim: rgba(10,11,10,0.45);
+    --brand-scrim-cut: rgba(10,11,10,0.9);
+    --brand-seat-busy: rgba(10,11,10,0.12);
+    --brand-seat-busy-ink: #5b615a;
+    --brand-seat-booked: #e5b93a;
+    --brand-seat-service-line: #5b615a;
+    --brand-seat-unknown: rgba(10,11,10,0.06);
+    --brand-seat-offline: #c9372b;
+    --brand-ambient-season: #e2eef4;
+    --brand-season-accent: #0e6a8a;
+    --brand-ambient-brand: #eceef4;
+    --brand-ambient-club: #eaf2e8;
+    --brand-crystal: #0f7a33;
+    --brand-rarity-common: #6b7a6f;
+    --brand-rarity-rare: #1f6fd6;
+    --brand-rarity-epic: #7a3fd0;
+    --brand-rarity-legendary: #a86600;
+    --brand-metal-silver: #8c98a3;
+    --brand-metal-gold: #a87a00;
+    --brand-metal-platinum: #5f6b75;
+    --brand-metal-diamond: #127a99;
+    --brand-chart-1: #15924a;
+    --brand-chart-3: #b07a12;
+    --brand-chart-4: #858c84;
+    --brand-cat-1: #0f7a33;
+    --brand-cat-2: #2f63c9;
+    --brand-cat-3: #8f620c;
+    --brand-cat-4: #0c7060;
+    --brand-cat-5: #b04f22;
+    --brand-cat-6: #b23a78;
+    --brand-cat-7: #1a6a92;
+    --brand-cat-8: #526c0b;
+    --brand-cat-9: #7d5f34;
+    --brand-cat-10: #5e665f;
+}
+
+.mission-card-dark,
+.surface-always-dark {
+    --brand-night: #0a0b0a;
+    --brand-surface: #121412;
+    --brand-surface-raised: #1a1d1a;
+    --brand-line: #262a26;
+    --brand-ink: #eef2ec;
+    --brand-ink-muted: #9ea39d;
+    --brand-ink-subtle: #979d95;
+    --brand-green: #42ff72;
+    --brand-green-ink: #42ff72;
+    --brand-on-green: #06110a;
+    --brand-rival: #a98bff;
+    --brand-rival-ink: #a98bff;
+    --brand-bridge-teal: #36e6c4;
+    --brand-bridge-blue: #7db0ff;
+    --brand-meet: #75c5b8;
+    --brand-danger: #ff6b5e;
+    --brand-on-danger: #ffffff;
+    --brand-warning: #ffc24a;
+    --brand-info: #7db0ff;
+    --brand-green-glow: rgba(66,255,114,0.4);
+    --brand-green-glow-soft: rgba(66,255,114,0.18);
+    --brand-green-fill: rgba(66,255,114,0.16);
+    --brand-bp-lit: #42ff72;
+    --brand-bp-lit-base: rgba(66,255,114,0.14);
+    --brand-bp-lit-peak: rgba(66,255,114,0.95);
+    --brand-select-fill: rgba(66,255,114,0.16);
+    --brand-on-select: #42ff72;
+    --brand-surface-glass: rgba(18,20,18,0.72);
+    --brand-scrim: rgba(0,0,0,0.6);
+    --brand-scrim-photo: rgba(0,0,0,0.55);
+    --brand-on-photo: #ffffff;
+    --brand-paper: #ffffff;
+    --brand-print-ink: #111210;
+    --brand-print-line: #d9d6cf;
+    --brand-scrim-cut: rgba(10,11,10,0.94);
+    --brand-seat-free: #42ff72;
+    --brand-seat-free-ink: #06110a;
+    --brand-seat-busy: rgba(238,242,236,0.16);
+    --brand-seat-busy-ink: #9ea39d;
+    --brand-seat-booked: #f2c94c;
+    --brand-seat-booked-ink: #06110a;
+    --brand-seat-service-line: #9ea39d;
+    --brand-seat-unknown: rgba(238,242,236,0.08);
+    --brand-seat-offline: #ff6b5e;
+    --brand-ambient-season: #0b1822;
+    --brand-season-accent: #96e4ff;
+    --brand-ambient-brand: #15171d;
+    --brand-ambient-club: #121812;
+    --brand-crystal: #42ff72;
+    --brand-medal-face: #1b1f1b;
+    --brand-medal-rim: #2f352f;
+    --brand-medal-rim-lit: #42ff72;
+    --brand-rarity-common: #a9b8ad;
+    --brand-rarity-rare: #4f9dff;
+    --brand-rarity-epic: #b06bff;
+    --brand-rarity-legendary: #ffb648;
+    --brand-metal-bronze: #d08a4e;
+    --brand-metal-silver: #cdd6de;
+    --brand-metal-gold: #ffc94a;
+    --brand-metal-platinum: #eef3f7;
+    --brand-metal-diamond: #8be4ff;
+    --brand-chart-1: #42ff72;
+    --brand-chart-2: var(--brand-info);
+    --brand-chart-3: #e0a83c;
+    --brand-chart-4: #737a72;
+    --brand-cat-1: #42ff72;
+    --brand-cat-2: #7db0ff;
+    --brand-cat-3: #e0a83c;
+    --brand-cat-4: #36d6b8;
+    --brand-cat-5: #e8875a;
+    --brand-cat-6: #ec7fb4;
+    --brand-cat-7: #6fcbea;
+    --brand-cat-8: #b9dc58;
+    --brand-cat-9: #cfb68a;
+    --brand-cat-10: #9aa59d;
+    --brand-zone-1: #148739;
+    --brand-zone-2: #3f72d4;
+    --brand-zone-3: #9c6d14;
+    --brand-zone-4: #148472;
+    --brand-zone-5: #bf4985;
+    --brand-mission-bg-1-from: #2f63c9;
+    --brand-mission-bg-1-to: #1b3c86;
+    --brand-mission-bg-2-from: #b04f22;
+    --brand-mission-bg-2-to: #83301a;
+    --brand-mission-bg-3-from: #14803a;
+    --brand-mission-bg-3-to: #0b5b36;
+    --brand-mission-bg-4-from: #b0407a;
+    --brand-mission-bg-4-to: #6e2150;
+    --brand-mission-bg-5-from: #8e6512;
+    --brand-mission-bg-5-to: #5e430b;
+    --brand-mission-bg-6-from: #13806f;
+    --brand-mission-bg-6-to: #0c5560;
+    --brand-mission-bg-7-from: #b3261e;
+    --brand-mission-bg-7-to: #771813;
+    --brand-mission-bg-8-from: #80522c;
+    --brand-mission-bg-8-to: #4d311a;
+    --brand-mission-bg-9-from: #1a1d1a;
+    --brand-mission-bg-9-to: #0a0b0a;
+}
+
+.surface-always-light {
+    --brand-night: #f6f5f1;
+    --brand-surface: #ffffff;
+    --brand-surface-raised: #f0eee9;
+    --brand-line: #e3e0d9;
+    --brand-ink: #111210;
+    --brand-ink-muted: #565952;
+    --brand-ink-subtle: #63665e;
+    --brand-green: #42ff72;
+    --brand-green-ink: #0d6e2e;
+    --brand-on-green: #06110a;
+    --brand-rival: #a98bff;
+    --brand-rival-ink: #5a3fd0;
+    --brand-bridge-teal: #36e6c4;
+    --brand-bridge-blue: #7db0ff;
+    --brand-meet: #75c5b8;
+    --brand-danger: #a82b1c;
+    --brand-on-danger: #ffffff;
+    --brand-warning: #8a5a00;
+    --brand-info: #2f63c9;
+    --brand-green-glow: rgba(66,255,114,0.35);
+    --brand-green-glow-soft: rgba(66,255,114,0.16);
+    --brand-green-fill: rgba(66,255,114,0.22);
+    --brand-bp-lit: #1d9a42;
+    --brand-bp-lit-base: rgba(29,154,66,0.3);
+    --brand-bp-lit-peak: #1d9a42;
+    --brand-select-fill: #141512;
+    --brand-on-select: #f6f5f1;
+    --brand-surface-glass: rgba(255,255,255,0.72);
+    --brand-scrim: rgba(10,11,10,0.45);
+    --brand-scrim-photo: rgba(0,0,0,0.55);
+    --brand-on-photo: #ffffff;
+    --brand-paper: #ffffff;
+    --brand-print-ink: #111210;
+    --brand-print-line: #d9d6cf;
+    --brand-scrim-cut: rgba(10,11,10,0.9);
+    --brand-seat-free: #42ff72;
+    --brand-seat-free-ink: #06110a;
+    --brand-seat-busy: rgba(10,11,10,0.12);
+    --brand-seat-busy-ink: #5b615a;
+    --brand-seat-booked: #e5b93a;
+    --brand-seat-booked-ink: #06110a;
+    --brand-seat-service-line: #5b615a;
+    --brand-seat-unknown: rgba(10,11,10,0.06);
+    --brand-seat-offline: #c9372b;
+    --brand-ambient-season: #e2eef4;
+    --brand-season-accent: #0e6a8a;
+    --brand-ambient-brand: #eceef4;
+    --brand-ambient-club: #eaf2e8;
+    --brand-crystal: #0f7a33;
+    --brand-medal-face: #1b1f1b;
+    --brand-medal-rim: #2f352f;
+    --brand-medal-rim-lit: #42ff72;
+    --brand-rarity-common: #6b7a6f;
+    --brand-rarity-rare: #1f6fd6;
+    --brand-rarity-epic: #7a3fd0;
+    --brand-rarity-legendary: #a86600;
+    --brand-metal-bronze: #d08a4e;
+    --brand-metal-silver: #8c98a3;
+    --brand-metal-gold: #a87a00;
+    --brand-metal-platinum: #5f6b75;
+    --brand-metal-diamond: #127a99;
+    --brand-chart-1: #15924a;
+    --brand-chart-2: var(--brand-info);
+    --brand-chart-3: #b07a12;
+    --brand-chart-4: #858c84;
+    --brand-cat-1: #0f7a33;
+    --brand-cat-2: #2f63c9;
+    --brand-cat-3: #8f620c;
+    --brand-cat-4: #0c7060;
+    --brand-cat-5: #b04f22;
+    --brand-cat-6: #b23a78;
+    --brand-cat-7: #1a6a92;
+    --brand-cat-8: #526c0b;
+    --brand-cat-9: #7d5f34;
+    --brand-cat-10: #5e665f;
+    --brand-zone-1: #148739;
+    --brand-zone-2: #3f72d4;
+    --brand-zone-3: #9c6d14;
+    --brand-zone-4: #148472;
+    --brand-zone-5: #bf4985;
+    --brand-mission-bg-1-from: #2f63c9;
+    --brand-mission-bg-1-to: #1b3c86;
+    --brand-mission-bg-2-from: #b04f22;
+    --brand-mission-bg-2-to: #83301a;
+    --brand-mission-bg-3-from: #14803a;
+    --brand-mission-bg-3-to: #0b5b36;
+    --brand-mission-bg-4-from: #b0407a;
+    --brand-mission-bg-4-to: #6e2150;
+    --brand-mission-bg-5-from: #8e6512;
+    --brand-mission-bg-5-to: #5e430b;
+    --brand-mission-bg-6-from: #13806f;
+    --brand-mission-bg-6-to: #0c5560;
+    --brand-mission-bg-7-from: #b3261e;
+    --brand-mission-bg-7-to: #771813;
+    --brand-mission-bg-8-from: #80522c;
+    --brand-mission-bg-8-to: #4d311a;
+    --brand-mission-bg-9-from: #1a1d1a;
+    --brand-mission-bg-9-to: #0a0b0a;
+}
+
+.brand-type-hero {
+    font: 800 92px/1 var(--brand-font-sans);
+    letter-spacing: 0;
+}
+
+.brand-type-display {
+    font: 300 76px/1 var(--brand-font-sans);
+    letter-spacing: -0.035em;
+}
+
+.brand-type-numeral {
+    font: 800 46px/1 var(--brand-font-sans);
+    letter-spacing: 0;
+}
+
+.brand-type-balance {
+    font: 800 64px/1 var(--brand-font-sans);
+    letter-spacing: 0;
+}
+
+.brand-type-display-phone {
+    font: 300 34px/1.05 var(--brand-font-sans);
+    letter-spacing: -0.035em;
+}
+
+.brand-type-display-print {
+    font: 300 64px/1 var(--brand-font-sans);
+    letter-spacing: -0.035em;
+}
+
+.brand-type-shout {
+    font: 800 64px/1 var(--brand-font-sans);
+    letter-spacing: 0;
+}
+
+.brand-type-title {
+    font: 600 30px/1.1 var(--brand-font-sans);
+}
+
+.brand-type-count {
+    font: 800 28px/1 var(--brand-font-sans);
+    letter-spacing: 0;
+}
+
+.brand-type-heading {
+    font: 600 22px/1.2 var(--brand-font-sans);
+}
+
+.brand-type-subhead {
+    font: 600 19px/1.2 var(--brand-font-sans);
+}
+
+.brand-type-body {
+    font: 400 17px/1.5 var(--brand-font-sans);
+}
+
+.brand-type-button {
+    font: 700 17px/1 var(--brand-font-sans);
+}
+
+.brand-type-button-m {
+    font: 700 15px/1 var(--brand-font-sans);
+}
+
+.brand-type-caption {
+    font: 500 14px/1.3 var(--brand-font-sans);
+}
+
+.brand-type-label {
+    font: 600 12px/1.2 var(--brand-font-sans);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --brand-dur-fast: 1ms;
+        --brand-dur-tap: 1ms;
+        --brand-dur-base: 1ms;
+        --brand-dur-gesture: 1ms;
+        --brand-dur-enter: 1ms;
+        --brand-dur-press: 1ms;
+        --brand-dur-breath: 1ms;
+        --brand-dur-wave: 1ms;
+        --brand-dur-sheet: 1ms;
+        --brand-dur-count: 1ms;
+        --brand-dur-stagger: 1ms;
+        --brand-dur-pulse: 1ms;
+    }
+}

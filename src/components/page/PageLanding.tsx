@@ -37,9 +37,9 @@ const hoursText = (wh: unknown): string | null => {
 /** Тёмный текст на светлом акценте, белый — на тёмном (кнопка и наклейки читаются при любом цвете клуба). */
 const onAccent = (hex: string) => {
     const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
-    if (!m) return '#06110a';
+    if (!m) return 'var(--brand-on-green)';
     const [r, g, b] = [m[1], m[2], m[3]].map((x) => parseInt(x, 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.32 ? '#06110a' : '#ffffff';
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.32 ? 'var(--brand-on-green)' : 'var(--brand-paper)';
 };
 
 const socialLinks = (s: ClubLanding['club']['socialLinks']) => {
@@ -81,7 +81,7 @@ const PageLanding: React.FC<Props> = ({ page, club, accent, coverUrl, isDesktop,
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
             <div style={{ fontSize: 19, fontWeight: 600, lineHeight: 1.2 }}>{club.name}</div>
             {(address || hours) && (
-                <div style={{ fontSize: 14, fontWeight: 500, color: light ? 'var(--lf-muted)' : '#c9cec7' }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: light ? 'var(--lf-muted)' : 'var(--brand-ink-muted)' }}>
                     {[address, hours].filter(Boolean).join(' · ')}
                 </div>
             )}
@@ -92,8 +92,8 @@ const PageLanding: React.FC<Props> = ({ page, club, accent, coverUrl, isDesktop,
     const nightHeader = (
         <div style={{ position: 'relative', height: isDesktop ? 280 : 236, borderRadius: 28, overflow: 'hidden', background: 'var(--lf-surface)' }}>
             {cover && <img src={cover} alt={`Зал клуба ${club.name}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(175deg, rgba(10,11,10,0) 35%, rgba(10,11,10,0.94) 92%)' }} />
-            <div style={{ position: 'absolute', left: 16, right: 16, bottom: 16, display: 'flex', alignItems: 'center', gap: 12, color: '#eef2ec' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(175deg, color-mix(in srgb, var(--brand-night) 0%, transparent) 35%, color-mix(in srgb, var(--brand-night) 94%, transparent) 92%)' }} />
+            <div style={{ position: 'absolute', left: 16, right: 16, bottom: 16, display: 'flex', alignItems: 'center', gap: 12, color: 'var(--brand-on-photo)' }}>
                 {logo(52)}
                 {nameBlock()}
             </div>
@@ -105,7 +105,7 @@ const PageLanding: React.FC<Props> = ({ page, club, accent, coverUrl, isDesktop,
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '0 4px' }}>
                 {club.avatarUrl && (
-                    <div style={{ width: 64, height: 64, borderRadius: 20, background: '#0a0b0a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ width: 64, height: 64, borderRadius: 'var(--brand-radius-inner)', background: 'var(--brand-night)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         {logo(46)}
                     </div>
                 )}
@@ -119,11 +119,11 @@ const PageLanding: React.FC<Props> = ({ page, club, accent, coverUrl, isDesktop,
     const photoHero = (
         <div style={{ position: 'relative', height: isDesktop ? 460 : '58vh', minHeight: isDesktop ? undefined : 340, overflow: 'hidden', background: 'var(--lf-surface)' }}>
             {cover && <img src={cover} alt={`Зал клуба ${club.name}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: '30% center' }} />}
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(175deg, rgba(10,11,10,0.55) 0%, rgba(10,11,10,0.05) 24%, rgba(10,11,10,0.25) 45%, rgba(10,11,10,1) 100%)' }} />
-            <div style={{ position: 'absolute', top: 20, left: 16, right: 16, maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 10, color: '#eef2ec' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(175deg, color-mix(in srgb, var(--brand-night) 55%, transparent) 0%, color-mix(in srgb, var(--brand-night) 5%, transparent) 24%, color-mix(in srgb, var(--brand-night) 25%, transparent) 45%, color-mix(in srgb, var(--brand-night) 100%, transparent) 100%)' }} />
+            <div style={{ position: 'absolute', top: 20, left: 16, right: 16, maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 10, color: 'var(--brand-on-photo)' }}>
                 {logo(40)}
                 <div style={{ flexGrow: 1, fontSize: 15, fontWeight: 700 }}>{club.name}</div>
-                {hours && <span style={{ height: 28, padding: '0 12px', borderRadius: 999, background: 'rgba(18,20,18,0.72)', display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>{hours === 'Открыто круглосуточно' ? '24/7' : hours}</span>}
+                {hours && <span style={{ height: 28, padding: '0 12px', borderRadius: 999, background: 'var(--brand-surface-glass)', display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>{hours === 'Открыто круглосуточно' ? '24/7' : hours}</span>}
             </div>
         </div>
     );
@@ -141,6 +141,9 @@ const PageLanding: React.FC<Props> = ({ page, club, accent, coverUrl, isDesktop,
         <footer style={{ padding: '24px 0 8px', textAlign: 'center' }} className="lf-label">Страница клуба на Loot Arena</footer>
     );
 
+    // Тема документа «Плитка» на всю страницу: «Светлая» — светлые токены, «Ночь»/«Фото» — тёмные (brand.css).
+    const pageClass = `lf-page ${theme === 'light' ? 'surface-always-light' : 'surface-always-dark'}`;
+
     const style = {
         '--lf-accent': accent,
         '--lf-on-accent': onAccent(accent),
@@ -151,7 +154,7 @@ const PageLanding: React.FC<Props> = ({ page, club, accent, coverUrl, isDesktop,
     // разная, и липкая колонка выше экрана прятала бы свой низ. ──
     if (isDesktop) {
         return (
-            <div className="lf-page" data-theme={theme} style={style}>
+            <div className={pageClass} data-theme={theme} style={style}>
                 {theme === 'photo' && photoHero}
                 <div style={{
                     maxWidth: 1200, margin: theme === 'photo' ? '-200px auto 0' : '0 auto', padding: '32px 32px 40px', position: 'relative',
@@ -177,7 +180,7 @@ const PageLanding: React.FC<Props> = ({ page, club, accent, coverUrl, isDesktop,
 
     // ── Телефон: одна колонка, первым экраном — шапка, оффер и номер телефона. ──
     return (
-        <div className="lf-page" data-theme={theme} style={style}>
+        <div className={pageClass} data-theme={theme} style={style}>
             {theme === 'photo' && photoHero}
             <div style={{ maxWidth: 480, margin: theme === 'photo' ? '-140px auto 0' : '0 auto', padding: '16px 16px 32px', position: 'relative', display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {theme === 'night' && nightHeader}

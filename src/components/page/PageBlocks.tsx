@@ -110,20 +110,20 @@ const Lightbox: React.FC<{ images: string[]; index: number; onClose: () => void;
     const arrow = (dir: 1 | -1) => (
         <button type="button" aria-label={dir > 0 ? 'Следующее фото' : 'Предыдущее фото'}
             onClick={(e) => { e.stopPropagation(); onIndex((index + dir + images.length) % images.length); }}
-            style={{ position: 'absolute', top: '50%', [dir > 0 ? 'right' : 'left']: 12, transform: 'translateY(-50%)', width: 48, height: 48, borderRadius: 999, border: 0, background: 'rgba(18,20,18,0.72)', color: '#eef2ec', fontSize: 22, cursor: 'pointer' }}>
+            style={{ position: 'absolute', top: '50%', [dir > 0 ? 'right' : 'left']: 12, transform: 'translateY(-50%)', width: 48, height: 48, borderRadius: 999, border: 0, background: 'var(--brand-surface-glass)', color: 'var(--brand-on-photo)', fontSize: 22, cursor: 'pointer' }}>
             {dir > 0 ? '›' : '‹'}
         </button>
     );
     return (
         <div role="dialog" aria-modal="true" aria-label="Фото клуба" onClick={onClose}
-            style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(5,6,7,0.94)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+            style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'var(--brand-scrim-cut)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
             <img src={images[index]} alt={`Фото клуба ${index + 1} из ${images.length}`} onClick={(e) => e.stopPropagation()}
                 style={{ maxWidth: '100%', maxHeight: '86vh', borderRadius: 20, objectFit: 'contain' }} />
             {images.length > 1 && arrow(-1)}
             {images.length > 1 && arrow(1)}
             <button type="button" aria-label="Закрыть" onClick={onClose}
-                style={{ position: 'absolute', top: 16, right: 16, width: 44, height: 44, borderRadius: 999, border: 0, background: 'rgba(18,20,18,0.72)', color: '#eef2ec', fontSize: 20, cursor: 'pointer' }}>✕</button>
-            <div style={{ position: 'absolute', bottom: 20, left: 0, right: 0, textAlign: 'center', color: '#9ea39d', fontSize: 14, fontWeight: 500 }}>{index + 1} / {images.length}</div>
+                style={{ position: 'absolute', top: 16, right: 16, width: 44, height: 44, borderRadius: 999, border: 0, background: 'var(--brand-surface-glass)', color: 'var(--brand-on-photo)', fontSize: 20, cursor: 'pointer' }}>✕</button>
+            <div style={{ position: 'absolute', bottom: 20, left: 0, right: 0, textAlign: 'center', color: 'var(--brand-ink-muted)', fontSize: 14, fontWeight: 500 }}>{index + 1} / {images.length}</div>
         </div>
     );
 };
@@ -162,7 +162,7 @@ export const GalleryBlock: React.FC<{ images: string[]; theme: PageTheme; deskto
                         <button key={src} type="button" onClick={() => show(3)} aria-label={`Ещё ${rest} фото`}
                             style={{ position: 'relative', padding: 0, border: 0, borderRadius: 14, overflow: 'hidden', cursor: 'zoom-in' }}>
                             <img src={src} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                            <span style={{ position: 'absolute', inset: 0, background: 'rgba(10,11,10,0.55)', color: '#fff', fontSize: 17, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+{rest}</span>
+                            <span style={{ position: 'absolute', inset: 0, background: 'color-mix(in srgb, var(--brand-night) 55%, transparent)', color: 'var(--brand-on-photo)', fontSize: 17, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+{rest}</span>
                         </button>
                     ) : img(src, i + 1, { borderRadius: 14 })
                 ))}
@@ -191,15 +191,15 @@ export const VideoBlock: React.FC<{ video: NonNullable<LandingPageDesign['video'
         <section aria-label="Видео клуба" className="lf-card" style={{ position: 'relative', overflow: 'hidden', aspectRatio: '16 / 9', padding: 0 }}>
             <video ref={ref} src={video.url} poster={poster} preload="none" playsInline controls={playing}
                 onPlay={() => setPlaying(true)}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', background: '#050607' }} />
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', background: 'var(--brand-night)' }} />
             {!playing && (
                 <button type="button" aria-label="Смотреть видео клуба"
                     onClick={() => { setPlaying(true); onEvent?.('page_video_play'); void ref.current?.play().catch(() => { /* браузер запретил — останутся контролы */ }); }}
-                    style={{ position: 'absolute', inset: 0, border: 0, cursor: 'pointer', background: 'linear-gradient(175deg, rgba(10,11,10,0.05) 40%, rgba(10,11,10,0.85) 100%)', display: 'flex', alignItems: 'flex-end', padding: 20, gap: 14 }}>
+                    style={{ position: 'absolute', inset: 0, border: 0, cursor: 'pointer', background: 'linear-gradient(175deg, color-mix(in srgb, var(--brand-night) 5%, transparent) 40%, color-mix(in srgb, var(--brand-night) 85%, transparent) 100%)', display: 'flex', alignItems: 'flex-end', padding: 20, gap: 14 }}>
                     <span style={{ width: 56, height: 56, borderRadius: 999, background: 'var(--lf-accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="var(--lf-on-accent)" /></svg>
                     </span>
-                    <span style={{ color: '#eef2ec', fontSize: 17, fontWeight: 600, alignSelf: 'center' }}>Видео клуба</span>
+                    <span style={{ color: 'var(--brand-on-photo)', fontSize: 17, fontWeight: 600, alignSelf: 'center' }}>Видео клуба</span>
                 </button>
             )}
         </section>
@@ -242,7 +242,7 @@ export const MapBlock: React.FC<{
     const route = `https://yandex.ru/maps/?rtext=~${map.lat},${map.lng}&rtt=auto`;
     return (
         <section aria-labelledby="lf-map-h" className="lf-card" style={{ overflow: 'hidden', padding: 0 }}>
-            {!failed && <div ref={boxRef} style={{ height: 260, background: theme === 'light' ? '#eef2ec' : '#050607' }} />}
+            {!failed && <div ref={boxRef} style={{ height: 260, background: 'var(--lf-raised)' }} />}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 16px 16px 20px', flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 1 180px', minWidth: 0 }}>
                     <h2 id="lf-map-h" style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{address || clubName}</h2>

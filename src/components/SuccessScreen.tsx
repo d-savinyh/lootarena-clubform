@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import type { LeadGift, GiftStatus, GiftReason, IneligibleBy, IneligibleReason, PrevGiftState } from '../utils/api';
 import { HEALTH_WARNING_TEXT } from '../utils/ageGate';
+import GiftIcon from './GiftIcon';
 
 interface SuccessScreenProps {
     clubName: string;
@@ -209,13 +210,8 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
     const overlay = (
         // Прокручиваемый оверлей: на невысоких экранах контент выше вьюпорта —
         // overflow-y-auto + min-h-full позволяют доскроллить до нижних кнопок, иначе они уезжают за край.
-        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain animate-fade-in" style={{ backgroundColor: 'rgba(0, 0, 0, 0.92)' }}>
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain animate-fade-in" style={{ backgroundColor: 'var(--brand-scrim-cut)' }}>
             <div className="min-h-full flex items-center justify-center p-6">
-                {/* Фоновый glow — чисто декоративный, не должен перехватывать клики */}
-                <div
-                    className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full blur-[150px] opacity-[0.06]"
-                    style={{ backgroundColor: brandColor }}
-                />
 
                 <div className="relative max-w-md w-full animate-scale-in">
                 {/* Иконка */}
@@ -226,19 +222,15 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                             style={{ backgroundColor: `${brandColor}12` }}
                         >
                             {showGift ? (
-                                <span>{gift!.reward_icon || '🎁'}</span>
+                                <span>{gift!.reward_icon || <GiftIcon className="w-14 h-14" color={brandColor} />}</span>
                             ) : unclaimed ? (
-                                <span>🎁</span>
+                                <GiftIcon className="w-14 h-14" color={brandColor} />
                             ) : (
                                 <svg className="w-14 h-14" style={{ color: brandColor }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             )}
                         </div>
-                        <div
-                            className="absolute -inset-6 rounded-full opacity-15 blur-3xl animate-glow-pulse"
-                            style={{ backgroundColor: brandColor }}
-                        />
                     </div>
                 </div>
 
@@ -269,7 +261,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({ clubName, brandColor, add
                                 className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0"
                                 style={{ backgroundColor: `${brandColor}18` }}
                             >
-                                {gift!.reward_icon || '🎁'}
+                                {gift!.reward_icon || <GiftIcon className="w-7 h-7" color={brandColor} />}
                             </div>
                             <div className="min-w-0">
                                 <div className="text-lg font-black text-white truncate">{giftSummary(gift!)}</div>

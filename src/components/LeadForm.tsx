@@ -159,7 +159,6 @@ const LeadForm: React.FC<LeadFormProps> = ({ brandColor, currency, onSubmit, isL
                     } ${blocked ? 'opacity-50' : ''}`}
                 style={{
                     backgroundColor: brandColor,
-                    boxShadow: `0 0 24px ${brandColor}30, 0 0 60px ${brandColor}10`,
                 }}
             >
                 {isLoading ? (

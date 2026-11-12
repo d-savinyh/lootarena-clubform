@@ -2,18 +2,21 @@
 /* Шрифт «Плитки» — Geologica (OFL) из своего бандла: со сторонних CDN (Google Fonts) шрифты не грузим,
    иначе IP гостя уходит за рубеж при каждом открытии формы (specs/legal/lead-forms-compliance.md в ЕРП). */
 @import "@fontsource-variable/geologica";
+/* Токены «Плитки» (--brand-*): цвета, радиусы, длительности и кривые страницы берутся только отсюда. */
+@import "./brand.css";
 
-@theme {
+/* Цвета Tailwind — ссылки на «Плитку», своих значений нет. */
+@theme inline {
   --font-sans: 'Geologica Variable', 'Geologica', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --color-brand: #30D158;
-  --color-brand-dark: #1a7a33;
-  --color-neon-blue: #0A84FF;
-  --color-neon-purple: #5E5CE6;
-  --color-neon-pink: #FF375F;
-  --color-surface: #000000;
-  --color-surface-card: #111111;
-  --color-surface-elevated: #1A1A1A;
-  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --color-brand: var(--brand-green);
+  --color-brand-dark: var(--brand-green-ink);
+  --color-neon-blue: var(--brand-info);
+  --color-neon-purple: var(--brand-rival);
+  --color-neon-pink: var(--brand-danger);
+  --color-surface: var(--brand-night);
+  --color-surface-card: var(--brand-surface);
+  --color-surface-elevated: var(--brand-surface-raised);
+  --color-border-subtle: var(--brand-line);
 }
 
 @layer base {
@@ -29,8 +32,8 @@
 
   body {
     font-family: var(--font-sans);
-    background-color: var(--color-surface);
-    color: #fff;
+    background-color: var(--brand-night);
+    color: var(--brand-ink);
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -43,8 +46,8 @@
   }
 
   ::selection {
-    background: rgba(48, 209, 88, 0.3);
-    color: #fff;
+    background: var(--brand-select-fill);
+    color: var(--brand-ink);
   }
 }
 
@@ -93,113 +96,102 @@
 }
 
 /* Утилитарные классы анимаций */
+/* Длительности и кривые — токены «Плитки» (появление — enter/base + ease-out, шаг лесенки — stagger). */
 .animate-float {
-  animation: float 5s ease-in-out infinite;
+  animation: float var(--brand-dur-breath) var(--brand-ease-inout) infinite;
 }
 
+/* «Пульс свечения» снят: в «Плитке» нет свечения у контента (R12). Класс оставлен пустым для совместимости. */
 .animate-glow-pulse {
-  animation: glow-pulse 4s ease-in-out infinite;
+  animation: none;
 }
 
 .animate-slide-up {
-  animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fade-in-up var(--brand-dur-base) var(--brand-ease-out) forwards;
 }
 
 .animate-slide-up-delay-1 {
-  animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.12s forwards;
+  animation: fade-in-up var(--brand-dur-base) var(--brand-ease-out) calc(var(--brand-dur-stagger) * 1.5) forwards;
   opacity: 0;
 }
 
 .animate-slide-up-delay-2 {
-  animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.24s forwards;
+  animation: fade-in-up var(--brand-dur-base) var(--brand-ease-out) calc(var(--brand-dur-stagger) * 3) forwards;
   opacity: 0;
 }
 
 .animate-slide-up-delay-3 {
-  animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.36s forwards;
+  animation: fade-in-up var(--brand-dur-base) var(--brand-ease-out) calc(var(--brand-dur-stagger) * 4.5) forwards;
   opacity: 0;
 }
 
 .animate-scale-in {
-  animation: scale-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: scale-in var(--brand-dur-base) var(--brand-ease-out) forwards;
 }
 
 .animate-fade-in {
-  animation: fade-in 0.5s ease forwards;
+  animation: fade-in var(--brand-dur-fast) var(--brand-ease-out) forwards;
 }
 
-/* ─── Glassmorphism (Apple-grade) ─── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float { animation: none; }
+}
+
+/* ─── Карточки ─── */
+/* Имя .glass историческое: в «Плитке» стекло только у плавающего «хрома», карточка контента — плоская поверхность. */
 .glass {
-  background: rgba(18, 18, 18, 0.75);
-  backdrop-filter: blur(40px) saturate(180%);
-  -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-line);
 }
 
 .glass-light {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--brand-surface-raised);
+  border: 1px solid var(--brand-line);
 }
 
-/* ─── Glow-эффекты ─── */
-.glow-brand {
-  box-shadow: 0 0 40px rgba(48, 209, 88, 0.12), 0 0 80px rgba(48, 209, 88, 0.04);
-}
-
+/* Свечение снято (R12 «без градиентов и свечения»); классы оставлены пустыми для совместимости. */
+.glow-brand,
 .glow-brand-strong {
-  box-shadow: 0 0 20px rgba(48, 209, 88, 0.25), 0 0 60px rgba(48, 209, 88, 0.08);
+  box-shadow: none;
 }
 
 /* ─── Apple-style кнопка ─── */
 .btn-apple {
   position: relative;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform var(--brand-dur-tap) var(--brand-ease-out), filter var(--brand-dur-fast) var(--brand-ease-out);
 }
 
 .btn-apple:hover {
-  transform: scale(1.02);
-  filter: brightness(1.1);
+  filter: brightness(1.08);
 }
 
 .btn-apple:active {
   transform: scale(0.98);
 }
 
-.btn-apple::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 50%);
-  pointer-events: none;
-}
-
 /* ─── Apple-style инпуты ─── */
 .input-apple {
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color var(--brand-dur-fast) var(--brand-ease-out), box-shadow var(--brand-dur-fast) var(--brand-ease-out);
+  background: var(--brand-surface-raised);
+  border: 1px solid var(--brand-line);
 }
 
 .input-apple:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--brand-ink-subtle);
 }
 
 .input-apple:focus {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.04);
+  border-color: var(--brand-ink-muted);
+  box-shadow: 0 0 0 4px var(--brand-select-fill);
 }
 
 .input-apple.input-error {
-  border-color: rgba(255, 59, 48, 0.5);
+  border-color: var(--brand-danger);
 }
 
 .input-apple.input-error:focus {
-  box-shadow: 0 0 0 4px rgba(255, 59, 48, 0.1);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-danger) 18%, transparent);
 }
 
 /* ─── Hero-секция обложки ─── */
@@ -254,11 +246,9 @@
 }
 
 /* ─── Текстовый градиент ─── */
+/* Градиентный текст снят (R12): обычный цвет текста «Плитки». Класс оставлен для совместимости. */
 .text-gradient {
-  background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--brand-ink);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -266,37 +256,32 @@
    Цвета — дизайн-система «Плитка» (night/surface/line/ink, зелёный «свободно» везде);
    акцент — цвет клуба из настроек формы. Без page страница рисуется прежним видом.
    ═══════════════════════════════════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Geologica:wght@300;400;500;600;700;800&display=swap');
+/* Шрифт — Geologica из своего бандла (@fontsource, начало файла). Google Fonts здесь был вторым источником
+   и уводил IP гостя за рубеж при каждом открытии формы — убран 12.11.2026. */
 
+/* Палитра страницы — токены «Плитки»: «Ночь» и «Фото» берут тёмную тему документа, «Светлая» — светлую
+   (те же значения, что .surface-always-dark / .surface-always-light в brand.css). */
 .lf-page {
-  --lf-bg: #0a0b0a;
-  --lf-surface: #121412;
-  --lf-raised: #1a1d1a;
-  --lf-line: #262a26;
-  --lf-ink: #eef2ec;
-  --lf-muted: #9ea39d;
-  --lf-free: #42ff72;
-  --lf-on-free: #06110a;
-  --lf-busy: rgba(238, 242, 236, 0.16);
-  --lf-on-accent: #06110a;
-  font-family: 'Geologica', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --lf-bg: var(--brand-night);
+  --lf-surface: var(--brand-surface);
+  --lf-raised: var(--brand-surface-raised);
+  --lf-line: var(--brand-line);
+  --lf-ink: var(--brand-ink);
+  --lf-muted: var(--brand-ink-muted);
+  --lf-free: var(--brand-seat-free);
+  --lf-on-free: var(--brand-seat-free-ink);
+  --lf-busy: var(--brand-seat-busy);
+  --lf-on-accent: var(--brand-on-green);
+  font-family: var(--font-sans);
   background: var(--lf-bg);
   color: var(--lf-ink);
   min-height: 100vh;
-}
-.lf-page[data-theme='light'] {
-  --lf-bg: #f4f6f3;
-  --lf-surface: #ffffff;
-  --lf-raised: #eef2ec;
-  --lf-line: #dce1da;
-  --lf-ink: #0a0b0a;
-  --lf-muted: #525851;
-  --lf-busy: rgba(10, 11, 10, 0.12);
+  min-height: 100dvh;
 }
 .lf-card {
   background: var(--lf-surface);
   border: 1px solid var(--lf-line);
-  border-radius: 28px;
+  border-radius: var(--brand-radius-card);
 }
 .lf-h2 { margin: 0; font-size: 22px; font-weight: 600; line-height: 1.2; }
 .lf-muted { color: var(--lf-muted); }
@@ -304,9 +289,9 @@
 .lf-label { font-size: 12px; font-weight: 600; color: var(--lf-muted); }
 .lf-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  height: 46px; padding: 0 18px; border-radius: 14px; font-size: 15px; font-weight: 700;
+  height: 46px; padding: 0 18px; border-radius: var(--brand-radius-button-m); font-size: 15px; font-weight: 700;
   background: var(--lf-raised); color: var(--lf-ink); text-decoration: none; border: 0; cursor: pointer;
-  transition: filter 250ms cubic-bezier(.22,.8,.3,1);
+  transition: filter var(--brand-dur-fast) var(--brand-ease-out);
 }
 .lf-btn:hover { filter: brightness(1.15); }
 .lf-btn--accent { background: var(--lf-accent); color: var(--lf-on-accent); }
@@ -317,28 +302,27 @@
 
 /* Маркер клуба на карте: логотип в зелёном кольце со свечением (как на lootarena.ru/gamers). */
 .lf-map-marker {
-  width: 52px; height: 52px; border-radius: 999px; background: #050607; border: 3px solid #42ff72;
+  width: 52px; height: 52px; border-radius: var(--brand-radius-pill); background: var(--brand-night); border: 3px solid var(--brand-green);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 0 10px rgba(66, 255, 114, 0.14), 0 0 36px rgba(66, 255, 114, 0.55);
+  box-shadow: 0 0 0 10px var(--brand-bp-lit-base), 0 0 36px var(--brand-green-glow);
 }
-.lf-map-marker img { width: 32px; height: 32px; object-fit: contain; border-radius: 999px; }
+.lf-map-marker img { width: 32px; height: 32px; object-fit: contain; border-radius: var(--brand-radius-pill); }
 
 /* Светлая тема: общие компоненты формы (OfferCard, LeadForm, ClubPicker) нарисованы под тёмный фон
    классами text-white/* и .glass. Переопределяем их только внутри светлой страницы. */
 .lf-page[data-theme='light'] .glass {
-  background: #ffffff; border-color: #dce1da;
-  backdrop-filter: none; -webkit-backdrop-filter: none;
+  background: var(--lf-surface); border-color: var(--lf-line);
 }
-.lf-page[data-theme='light'] .text-white { color: #0a0b0a; }
-.lf-page[data-theme='light'] :is(.text-white\/70, .text-white\/65, .text-white\/60, .text-white\/50) { color: #2c312b; }
-.lf-page[data-theme='light'] :is(.text-white\/40, .text-white\/35, .text-white\/30, .text-white\/25) { color: #525851; }
-.lf-page[data-theme='light'] :is(.text-white\/20, .text-white\/15, .text-white\/10) { color: #6b716a; }
-.lf-page[data-theme='light'] :is(.border-white\/5, .border-white\/8, .border-white\/10, .border-white\/15) { border-color: #dce1da; }
-.lf-page[data-theme='light'] .bg-white\/3 { background-color: #eef2ec; }
-.lf-page[data-theme='light'] .text-red-400 { color: #a82b1c; }
-.lf-page[data-theme='light'] .input-apple { background: #eef2ec; border-color: #dce1da; color: #0a0b0a; }
-.lf-page[data-theme='light'] .input-apple::placeholder { color: #6b716a; }
-.lf-page[data-theme='light'] .input-apple:focus { border-color: #9ea39d; box-shadow: 0 0 0 4px rgba(10, 11, 10, 0.05); }
+.lf-page[data-theme='light'] .text-white { color: var(--lf-ink); }
+.lf-page[data-theme='light'] :is(.text-white\/70, .text-white\/65, .text-white\/60, .text-white\/50) { color: color-mix(in srgb, var(--lf-ink) 82%, var(--lf-muted)); }
+.lf-page[data-theme='light'] :is(.text-white\/40, .text-white\/35, .text-white\/30, .text-white\/25) { color: var(--lf-muted); }
+.lf-page[data-theme='light'] :is(.text-white\/20, .text-white\/15, .text-white\/10) { color: var(--brand-ink-subtle); }
+.lf-page[data-theme='light'] :is(.border-white\/5, .border-white\/8, .border-white\/10, .border-white\/15) { border-color: var(--lf-line); }
+.lf-page[data-theme='light'] .bg-white\/3 { background-color: var(--lf-raised); }
+.lf-page[data-theme='light'] .text-red-400 { color: var(--brand-danger); }
+.lf-page[data-theme='light'] .input-apple { background: var(--lf-raised); border-color: var(--lf-line); color: var(--lf-ink); }
+.lf-page[data-theme='light'] .input-apple::placeholder { color: var(--brand-ink-subtle); }
+.lf-page[data-theme='light'] .input-apple:focus { border-color: var(--lf-muted); box-shadow: 0 0 0 4px var(--brand-select-fill); }
 
 /* Тёмные темы «Плитки»: общие стеклянные карточки — на surface, а не на чистом чёрном. */
-.lf-page:not([data-theme='light']) .glass { background: rgba(18, 20, 18, 0.82); border-color: #262a26; }
+.lf-page:not([data-theme='light']) .glass { background: var(--lf-surface); border-color: var(--lf-line); }

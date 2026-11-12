@@ -67,7 +67,7 @@ const ClubPicker: React.FC<Props> = ({ clubs, selectedId, onSelect, brandColor, 
         <div
             id="club-picker"
             className={`glass rounded-[28px] ${isDesktop ? 'p-8' : 'p-6'} animate-slide-up-delay-1 transition-all`}
-            style={highlight ? { boxShadow: `0 0 0 2px ${brandColor}, 0 0 30px ${brandColor}40` } : undefined}
+            style={highlight ? { boxShadow: `0 0 0 2px ${brandColor}` } : undefined}
         >
             <div className="flex items-start justify-between gap-3 mb-1">
                 <h3 className={`font-black text-white ${isDesktop ? 'text-2xl' : 'text-xl'}`}>Куда придёшь?</h3>
