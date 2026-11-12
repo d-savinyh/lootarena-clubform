@@ -1,11 +1,13 @@
 import { Suspense, lazy } from 'react'
 import LandingPage from './pages/LandingPage'
-import PreviewNote from './components/PreviewNote'
-import { IS_PREVIEW } from './utils/preview'
+
 import './index.css'
 
 // Страница турнира грузится отдельным чанком: стартовый бандл лид-форм не растёт (check:bundle).
 const TournamentPage = lazy(() => import('./pages/TournamentPage'))
+// Плашка превью ЕРП — только на /__preview, гостю в стартовый чанк не нужна.
+const PreviewNote = lazy(() => import('./components/PreviewNote'))
+const IS_PREVIEW = window.location.pathname.replace(/\/+$/, '') === '/__preview'
 
 // Токен турнира — 32 hex (trn_tournaments.public_token). Маршрут сверяем ДО вычисления slug формы.
 const TOURNAMENT_ROUTE = /^\/t\/([0-9a-f]{32})\/?$/
@@ -25,7 +27,7 @@ function App() {
   if (IS_PREVIEW) {
     return (
       <>
-        <PreviewNote />
+        <Suspense fallback={null}><PreviewNote /></Suspense>
         <LandingPage slug="__preview" />
       </>
     )

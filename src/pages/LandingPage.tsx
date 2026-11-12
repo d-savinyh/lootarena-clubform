@@ -13,7 +13,8 @@ import { readClickIds, metrikaClientId } from '../utils/clickIds';
 import { CONSENT_VERSION } from '../utils/consent';
 import { readConfirmedAge, writeConfirmedAge } from '../utils/ageGate';
 import GiftPoster from '../components/GiftPoster';
-import { IS_PREVIEW, startPreview, subscribePreview } from '../utils/preview';
+// Превью ЕРП — отдельным чанком: гостю модуль не нужен.
+const IS_PREVIEW = typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/__preview';
 
 interface LandingPageProps {
     slug: string;
@@ -118,9 +119,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug, link }) => {
     useEffect(() => {
         // Превью в ЕРП: черновик приходит сообщением и обновляется на каждую правку — без просмотров и событий.
         if (IS_PREVIEW) {
-            const stopListen = startPreview((liveSlug) => getLandingData(liveSlug));
-            const stopSub = subscribePreview((l) => { if (l) { setLanding(l); setIsLoading(false); } });
-            return () => { stopSub(); stopListen(); };
+            let stop = () => { /* модуль превью ещё не загружен */ };
+            let cancelled = false;
+            void import('../utils/preview').then(({ startPreview, subscribePreview }) => {
+                if (cancelled) return;
+                const stopListen = startPreview((liveSlug) => getLandingData(liveSlug));
+                const stopSub = subscribePreview((l) => { if (l) { setLanding(l); setIsLoading(false); } });
+                stop = () => { stopSub(); stopListen(); };
+            });
+            return () => { cancelled = true; stop(); };
         }
         const load = async () => {
             try {

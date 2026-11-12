@@ -3,7 +3,8 @@ import { getPhoneFormat, applyMask, phoneDigits, isValidPhone } from '../utils/p
 import ConsentSheet from './ConsentSheet';
 import { PRIVACY_URL, type ForeignTracker } from '../utils/consent';
 import type { LandingOperator } from '../utils/api';
-import { IS_PREVIEW } from '../utils/preview';
+// Превью ЕРП (/__preview) — без автофокуса; модуль превью сюда не тянем (стартовый чанк).
+const IS_PREVIEW = typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/__preview';
 
 interface LeadFormProps {
     brandColor: string;
