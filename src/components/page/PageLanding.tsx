@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ClubLanding } from '../../utils/api';
+import { clubSocialLinks } from '../../utils/socialLinks';
 import type { LandingPageDesign, PageBlockType } from '../../utils/page';
 import { FreeNowBlock, GalleryBlock, MapBlock, PricesBlock, SocialBlock, VideoBlock } from './PageBlocks';
 
@@ -42,20 +43,11 @@ const onAccent = (hex: string) => {
     return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.32 ? 'var(--brand-on-green)' : 'var(--brand-paper)';
 };
 
-const socialLinks = (s: ClubLanding['club']['socialLinks']) => {
-    if (!s) return [];
-    return ([
-        s.vk ? { label: 'ВКонтакте', url: s.vk } : null,
-        s.telegram ? { label: 'Telegram', url: s.telegram.startsWith('http') ? s.telegram : `https://t.me/${s.telegram.replace(/^@/, '')}` } : null,
-        s.instagram ? { label: 'Instagram', url: s.instagram } : null,
-    ].filter(Boolean)) as { label: string; url: string }[];
-};
-
 const PageLanding: React.FC<Props> = ({ page, club, accent, coverUrl, isDesktop, offer, clubPicker, giftCard, form, error, hideClubDetails, onEvent }) => {
     const theme = page.theme;
     const hours = hideClubDetails ? null : hoursText(club.workingHours);
     const address = hideClubDetails ? null : club.address;
-    const social = hideClubDetails ? [] : socialLinks(club.socialLinks);
+    const social = hideClubDetails ? [] : clubSocialLinks(club.socialLinks);
     const cover = coverUrl || page.gallery[0] || null;
 
     const block = (type: PageBlockType): React.ReactNode => {

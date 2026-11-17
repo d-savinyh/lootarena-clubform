@@ -205,13 +205,21 @@ export const GalleryBlock: React.FC<{ images: string[]; theme: PageTheme; deskto
 // preload="none": первый экран не тянет мегабайты; звук — только по нажатию «смотреть».
 export const VideoBlock: React.FC<{ video: NonNullable<LandingPageDesign['video']>; fallbackPoster?: string; onEvent?: Track }> = ({ video, fallbackPoster, onEvent }) => {
     const [playing, setPlaying] = useState(false);
+    // Рамка — по пропорциям самого ролика (вертикальный 9:16 целиком, а не полоса из середины в 16:9).
+    // До метаданных — 16:9; вертикаль не выше 80% экрана, ролик вписывается без обрезки.
+    const [ratio, setRatio] = useState(16 / 9);
     const ref = useRef<HTMLVideoElement>(null);
     const poster = video.poster || fallbackPoster || undefined;
+    const vertical = ratio < 1;
     return (
-        <section aria-label="Видео клуба" className="lf-card" style={{ position: 'relative', overflow: 'hidden', aspectRatio: '16 / 9', padding: 0 }}>
-            <video ref={ref} src={video.url} poster={poster} preload="none" playsInline controls={playing}
+        <section aria-label="Видео клуба" className="lf-card" style={{ position: 'relative', overflow: 'hidden', aspectRatio: String(ratio), maxHeight: vertical ? '80vh' : undefined, padding: 0, background: 'var(--brand-night)' }}>
+            <video ref={ref} src={video.url} poster={poster} preload="metadata" playsInline controls={playing}
                 onPlay={() => setPlaying(true)}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', background: 'var(--brand-night)' }} />
+                onLoadedMetadata={(e) => {
+                    const v = e.currentTarget;
+                    if (v.videoWidth > 0 && v.videoHeight > 0) setRatio(Math.min(Math.max(v.videoWidth / v.videoHeight, 9 / 16), 21 / 9));
+                }}
+                style={{ width: '100%', height: '100%', objectFit: vertical ? 'contain' : 'cover', display: 'block', background: 'var(--brand-night)' }} />
             {!playing && (
                 <button type="button" aria-label="Смотреть видео клуба"
                     onClick={() => { setPlaying(true); onEvent?.('page_video_play'); void ref.current?.play().catch(() => { /* браузер запретил — останутся контролы */ }); }}
@@ -278,7 +286,7 @@ export const MapBlock: React.FC<{
 
 // ─── Соцсети ──────────────────────────────────────────────────────────────────
 export const SocialBlock: React.FC<{ links: { label: string; url: string }[]; onEvent?: Track }> = ({ links, onEvent }) => (
-    <nav aria-label="Клуб в соцсетях" style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(links.length, 3)}, minmax(0, 1fr))`, gap: 8 }}>
+    <nav aria-label="Клуб в соцсетях" style={{ display: 'grid', gridTemplateColumns: `repeat(${links.length === 4 ? 2 : Math.min(links.length, 3)}, minmax(0, 1fr))`, gap: 8 }}>
         {links.map((l) => (
             <a key={l.label} className="lf-btn" href={l.url} target="_blank" rel="noopener noreferrer"
                 onClick={() => onEvent?.('app_redirect_click', { social: l.label })}>{l.label}</a>

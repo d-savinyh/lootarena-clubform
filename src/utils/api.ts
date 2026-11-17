@@ -18,6 +18,7 @@ export interface ClubLanding {
             vk?: string;
             telegram?: string;
             instagram?: string;
+            website?: string;
         };
         /** Валюта клуба — по ней выбирается формат телефона (RUB → +7, BYN → +375, UZS → +998). */
         currency?: string;

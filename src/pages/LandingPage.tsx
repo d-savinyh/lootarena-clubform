@@ -13,6 +13,7 @@ import { readClickIds, metrikaClientId } from '../utils/clickIds';
 import { CONSENT_VERSION } from '../utils/consent';
 import { readConfirmedAge, writeConfirmedAge } from '../utils/ageGate';
 import GiftPoster from '../components/GiftPoster';
+import { clubSocialLinks } from '../utils/socialLinks';
 // Превью ЕРП — отдельным чанком: гостю модуль не нужен.
 const IS_PREVIEW = typeof window !== 'undefined' && window.location.pathname.replace(/\/+$/, '') === '/__preview';
 
@@ -444,12 +445,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug, link }) => {
     ) : null;
     const ctaText = clean(landing.form.ctaText || undefined);
     const socialRow = (() => {
-        const s = club.socialLinks || {};
-        const items = ([
-            s.vk ? { label: 'ВКонтакте', url: s.vk } : null,
-            s.telegram ? { label: 'Telegram', url: s.telegram.startsWith('http') ? s.telegram : `https://t.me/${s.telegram.replace(/^@/, '')}` } : null,
-            s.instagram ? { label: 'Instagram', url: s.instagram } : null,
-        ].filter(Boolean)) as { label: string; url: string }[];
+        const items = clubSocialLinks(club.socialLinks);
         if (!items.length) return null;
         return (
             <div className="flex items-center justify-center gap-4 mb-3">
