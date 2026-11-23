@@ -1,5 +1,8 @@
 import React from 'react';
 import HealthWarning from './HealthWarning';
+import GiftIcon from './GiftIcon';
+import RichText from './RichText';
+import type { GiftIconMode } from '../utils/page';
 
 interface OfferCardProps {
     title: string;
@@ -13,9 +16,11 @@ interface OfferCardProps {
     healthWarning?: boolean;
     /** Пересчитать кегль надписи, когда меняется реклама (выбран другой филиал — другой подарок). */
     warningFitKey?: string;
+    /** Значок подарка над заголовком: крупный (по умолчанию) / маленький на плашке / без значка (настройка «Вида страницы»). */
+    giftIcon?: GiftIconMode;
 }
 
-const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge, brandColor, isDesktop, healthWarning, warningFitKey }) => {
+const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge, brandColor, isDesktop, healthWarning, warningFitKey, giftIcon = 'big' }) => {
     return (
         <div className="relative animate-slide-up-delay-1">
 
@@ -28,16 +33,18 @@ const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge,
                         <div className="flex flex-wrap items-center gap-1.5 mb-5">
                             {badge && (
                                 <span
-                                    className="px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider text-black"
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider text-black"
                                     style={{ backgroundColor: brandColor }}
                                 >
+                                    {giftIcon === 'badge' && <GiftIcon className="w-3.5 h-3.5 -ml-0.5 shrink-0" />}
                                     {badge}
                                 </span>
                             )}
                         </div>
                     )}
 
-                    {/* Иконка подарка */}
+                    {/* Иконка подарка: крупная над заголовком; «на плашке» — маленькая в бейдже выше; «без значка» — нет. */}
+                    {giftIcon === 'big' && (
                     <div className={`mb-5 animate-float ${isDesktop ? '' : ''}`}>
                         <div
                             className={`${isDesktop ? 'w-20 h-20' : 'w-16 h-16'} rounded-2xl flex items-center justify-center`}
@@ -55,6 +62,7 @@ const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge,
                             </svg>
                         </div>
                     </div>
+                    )}
 
                     {/* Заголовок */}
                     <h2 className={`font-black text-white leading-tight mb-3 ${isDesktop ? 'text-3xl' : 'text-2xl'}`}>
@@ -62,9 +70,10 @@ const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge,
                     </h2>
 
                     {/* Описание */}
-                    <p className={`text-white/50 leading-relaxed ${isDesktop ? 'text-lg mb-6' : 'text-base mb-4'}`}>
-                        {description}
-                    </p>
+                    {/* Абзацы, переносы и списки — как клуб набрал в ЕРП (раньше HTML схлопывал их в одну строку). */}
+                    {description && (
+                        <RichText text={description} className={`text-white/50 leading-relaxed ${isDesktop ? 'text-lg mb-6' : 'text-base mb-4'}`} />
+                    )}
 
                     {/* Условия */}
                     {terms && (
@@ -72,7 +81,7 @@ const OfferCard: React.FC<OfferCardProps> = ({ title, description, terms, badge,
                             <svg className="w-4 h-4 text-white/25 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <span className="text-xs text-white/25 leading-relaxed">{terms}</span>
+                            <RichText text={terms} className="text-xs text-white/25 leading-relaxed" style={{ gap: '0.4em' }} />
                         </div>
                     )}
 

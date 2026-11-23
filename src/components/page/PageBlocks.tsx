@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { LandingPageDesign, PageTheme } from '../../utils/page';
-import { formatMinutes, formatMoney, freshnessLabel, summarizePrices } from '../../utils/page';
+import type { LandingPageDesign, PageClub, PageTheme } from '../../utils/page';
+import { formatMinutes, formatMoney, freshnessLabel, specsLine, summarizePrices } from '../../utils/page';
+import type { SocialKind, SocialLink } from '../../utils/socialLinks';
 
 type Track = (type: string, meta?: Record<string, unknown>) => void;
 
@@ -17,7 +18,19 @@ const SeatStrip: React.FC<{ free: number; total: number; label: string }> = ({ f
     </span>
 );
 
-export const FreeNowBlock: React.FC<{ free: NonNullable<LandingPageDesign['free']>; compact?: boolean }> = ({ free, compact }) => {
+/** Железо зоны под строкой «свободно»: видеокарта, процессор, память, герцовка (23.11.2026, «Сектор»). */
+const ZoneSpecs: React.FC<{ specs: NonNullable<LandingPageDesign['free']>['zones'][number]['specs'] }> = ({ specs }) => {
+    const line = specsLine(specs);
+    if (!line && !specs?.note) return null;
+    return (
+        <div className="lf-label" style={{ display: 'flex', flexDirection: 'column', gap: 2, overflowWrap: 'anywhere' }}>
+            {line && <span>{line}</span>}
+            {specs?.note && <span>{specs.note}</span>}
+        </div>
+    );
+};
+
+export const FreeNowBlock: React.FC<{ free: NonNullable<LandingPageDesign['free']>; compact?: boolean; showSpecs?: boolean }> = ({ free, compact, showSpecs }) => {
     const fresh = freshnessLabel(free.updatedAt);
     const sumFree = free.zones.reduce((acc, z) => acc + Math.max(0, z.available), 0);
     const sumTotal = free.zones.reduce((acc, z) => acc + Math.max(0, z.total), 0);
@@ -47,6 +60,7 @@ export const FreeNowBlock: React.FC<{ free: NonNullable<LandingPageDesign['free'
                                 {count}
                             </div>
                             <SeatStrip free={z.available} total={z.total} label={label} />
+                            {showSpecs && <ZoneSpecs specs={z.specs} />}
                         </div>
                     ) : (
                         <div key={z.name} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 0', borderTop: '1px solid var(--lf-line)' }}>
@@ -54,6 +68,7 @@ export const FreeNowBlock: React.FC<{ free: NonNullable<LandingPageDesign['free'
                                 <span style={{ flexGrow: 1, fontSize: 17, minWidth: 0 }}>{z.name}</span>
                                 {count}
                             </div>
+                            {showSpecs && <ZoneSpecs specs={z.specs} />}
                             <SeatStrip free={z.available} total={z.total} label={label} />
                         </div>
                     );
@@ -285,11 +300,99 @@ export const MapBlock: React.FC<{
 };
 
 // ─── Соцсети ──────────────────────────────────────────────────────────────────
-export const SocialBlock: React.FC<{ links: { label: string; url: string }[]; onEvent?: Track }> = ({ links, onEvent }) => (
-    <nav aria-label="Клуб в соцсетях" style={{ display: 'grid', gridTemplateColumns: `repeat(${links.length === 4 ? 2 : Math.min(links.length, 3)}, minmax(0, 1fr))`, gap: 8 }}>
+// Фирменные знаки сетей (23.11.2026, «Сектор»: «хочется нативные иконки»). Знак — цветом текста кнопки, цвет
+// кнопки выбирает клуб: нейтральные (как было), цвет кнопки страницы или свой из палитры мастера ЕРП.
+// Пути знаков — Material Design Icons (Apache 2.0), сайт — значок глобуса.
+const SOCIAL_PATHS: Record<Exclude<SocialKind, 'website'>, string> = {
+    vk: 'M15.07 2H8.93C3.33 2 2 3.33 2 8.93v6.14C2 20.67 3.33 22 8.93 22h6.14c5.6 0 6.93-1.33 6.93-6.93V8.93C22 3.33 20.67 2 15.07 2m3.08 14.27h-1.46c-.55 0-.72-.45-1.71-1.44-.86-.83-1.25-.94-1.46-.94-.3 0-.39.08-.39.5v1.31c0 .35-.11.57-1.04.57-1.54 0-3.25-.94-4.45-2.67-1.81-2.54-2.3-4.44-2.3-4.83 0-.21.08-.4.5-.4h1.47c.37 0 .51.16.65.56.72 2.09 1.92 3.91 2.41 3.91.19 0 .27-.09.27-.55V9.13c-.05-.99-.58-1.07-.58-1.43 0-.17.14-.34.37-.34h2.3c.31 0 .42.16.42.54v2.89c0 .31.13.42.23.42.18 0 .33-.11.67-.45 1.05-1.17 1.8-2.98 1.8-2.98.1-.21.26-.4.63-.4h1.46c.44 0 .54.22.44.54-.18.85-1.96 3.36-1.96 3.36-.15.26-.21.37 0 .65.15.21.66.65 1 1.04.62.71 1.1 1.3 1.22 1.71.13.41-.08.62-.49.62Z',
+    telegram: 'M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z',
+    instagram: 'M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2m-.2 2A3.6 3.6 0 0 0 4 7.6v8.8C4 18.39 5.61 20 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6C20 5.61 18.39 4 16.4 4H7.6m9.65 1.5a1.25 1.25 0 0 1 1.25 1.25A1.25 1.25 0 0 1 17.25 8 1.25 1.25 0 0 1 16 6.75a1.25 1.25 0 0 1 1.25-1.25M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3z',
+};
+
+export const SocialIcon: React.FC<{ kind: SocialKind; size?: number }> = ({ kind, size = 20 }) => kind === 'website' ? (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18" />
+    </svg>
+) : (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"><path d={SOCIAL_PATHS[kind]} fill="currentColor" /></svg>
+);
+
+/** `tone` — цвет кнопок: null — нейтральные; иначе фон и цвет знака (контраст считает PageLanding). */
+export const SocialBlock: React.FC<{ links: SocialLink[]; tone?: { bg: string; fg: string } | null; onEvent?: Track }> = ({ links, tone, onEvent }) => (
+    <nav aria-label="Клуб в соцсетях"
+        style={{
+            display: 'grid', gridTemplateColumns: `repeat(${links.length === 4 ? 2 : Math.min(links.length, 3)}, minmax(0, 1fr))`, gap: 8,
+            ...(tone ? { '--lf-accent': tone.bg, '--lf-on-accent': tone.fg } as React.CSSProperties : {}),
+        }}>
         {links.map((l) => (
-            <a key={l.label} className="lf-btn" href={l.url} target="_blank" rel="noopener noreferrer"
-                onClick={() => onEvent?.('app_redirect_click', { social: l.label })}>{l.label}</a>
+            <a key={l.label} className={`lf-btn${tone ? ' lf-btn--accent' : ''}`} href={l.url} target="_blank" rel="noopener noreferrer"
+                style={{ minWidth: 0 }}
+                onClick={() => onEvent?.('app_redirect_click', { social: l.label })}>
+                <SocialIcon kind={l.kind} />
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.label}</span>
+            </a>
         ))}
     </nav>
 );
+
+// ─── Наши клубы ───────────────────────────────────────────────────────────────
+// 23.11.2026 «Сектор»: «в самом низу нужно выбрать город и клуб, чтобы человек не думал, что у нас один клуб».
+// Клубы того же владельца (сервер: clubform_page_public), город — переключателем, у клуба — адрес и маршрут.
+const plural = (n: number, one: string, few: string, many: string) => {
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return one;
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+    return many;
+};
+
+export const ClubsBlock: React.FC<{ clubs: PageClub[]; onEvent?: Track }> = ({ clubs, onEvent }) => {
+    const cities: string[] = [];
+    clubs.forEach((c) => { const k = c.city || 'Другие'; if (!cities.includes(k)) cities.push(k); });
+    const home = clubs.find((c) => c.current)?.city || cities[0];
+    const [city, setCity] = useState(home);
+    const shown = cities.length > 1 ? clubs.filter((c) => (c.city || 'Другие') === city) : clubs;
+    return (
+        <section className="lf-card" style={{ padding: 24 }} aria-labelledby="lf-clubs-h">
+            <div className="lf-kicker">
+                {clubs.length} {plural(clubs.length, 'клуб', 'клуба', 'клубов')}
+                {cities.length > 1 ? ` · ${cities.length} ${plural(cities.length, 'город', 'города', 'городов')}` : ''}
+            </div>
+            <h2 id="lf-clubs-h" className="lf-h2" style={{ marginTop: 2 }}>Наши клубы</h2>
+            {cities.length > 1 && (
+                <div className="lf-scroll-x" role="group" aria-label="Город" style={{ marginTop: 14, marginRight: -24, paddingRight: 24 }}>
+                    {cities.map((c) => (
+                        <button key={c} type="button" aria-pressed={c === city}
+                            className={`lf-btn${c === city ? ' lf-btn--accent' : ''}`}
+                            style={{ height: 36, padding: '0 14px', borderRadius: 999, fontSize: 14 }}
+                            onClick={() => { setCity(c); onEvent?.('page_city_select', { city: c }); }}>
+                            {c}
+                        </button>
+                    ))}
+                </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', marginTop: 12 }}>
+                {shown.map((c) => {
+                    // Адрес «Находка» у клуба в Находке — повтор города: не показываем. Один город — показываем город.
+                    const sub = (c.address && c.address !== c.city ? c.address : null) || (cities.length < 2 ? c.city : null);
+                    const route = c.lat !== null && c.lng !== null ? `https://yandex.ru/maps/?rtext=~${c.lat},${c.lng}&rtt=auto` : null;
+                    return (
+                        <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: '1px solid var(--lf-line)' }}>
+                            <div style={{ flexGrow: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: 17, fontWeight: 600 }}>{c.name}</span>
+                                    {c.current && <span className="lf-kicker" style={{ color: 'var(--brand-green-ink)' }}>вы здесь</span>}
+                                </div>
+                                {sub && <div className="lf-label" style={{ marginTop: 2 }}>{sub}</div>}
+                            </div>
+                            {route && (
+                                <a className="lf-btn" href={route} target="_blank" rel="noopener noreferrer"
+                                    style={{ height: 40, padding: '0 14px', fontSize: 14, flexShrink: 0 }}
+                                    onClick={() => onEvent?.('page_club_route', { club: c.name })}>Маршрут</a>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </section>
+    );
+};

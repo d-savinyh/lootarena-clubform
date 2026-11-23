@@ -10,16 +10,19 @@ const webUrl = (raw: string): string | null => {
     return /^https?:\/\//i.test(url) ? url : null;
 };
 
-export const clubSocialLinks = (s: ClubLanding['club']['socialLinks']): { label: string; url: string }[] => {
+export type SocialKind = 'vk' | 'telegram' | 'instagram' | 'website';
+export interface SocialLink { kind: SocialKind; label: string; url: string }
+
+export const clubSocialLinks = (s: ClubLanding['club']['socialLinks']): SocialLink[] => {
     if (!s) return [];
     const vk = s.vk ? webUrl(s.vk) : null;
     const instagram = s.instagram ? webUrl(s.instagram) : null;
     // 17.11.2026 «Сектор Баляева»: сайт клуба сервер отдавал, а страница его пропускала.
     const website = s.website ? webUrl(s.website) : null;
     return ([
-        vk ? { label: 'ВКонтакте', url: vk } : null,
-        s.telegram ? { label: 'Telegram', url: s.telegram.startsWith('http') ? s.telegram : `https://t.me/${s.telegram.replace(/^@/, '')}` } : null,
-        instagram ? { label: 'Instagram', url: instagram } : null,
-        website ? { label: 'Сайт', url: website } : null,
-    ].filter(Boolean)) as { label: string; url: string }[];
+        vk ? { kind: 'vk', label: 'ВКонтакте', url: vk } : null,
+        s.telegram ? { kind: 'telegram', label: 'Telegram', url: s.telegram.startsWith('http') ? s.telegram : `https://t.me/${s.telegram.replace(/^@/, '')}` } : null,
+        instagram ? { kind: 'instagram', label: 'Instagram', url: instagram } : null,
+        website ? { kind: 'website', label: 'Сайт', url: website } : null,
+    ].filter(Boolean)) as SocialLink[];
 };
