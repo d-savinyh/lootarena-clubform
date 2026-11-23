@@ -10,6 +10,9 @@ export const pageDevFixture = (theme: string) => ({
     giftIcon: new URLSearchParams(window.location.search).get('dev_gift') || 'big',
     socialColor: new URLSearchParams(window.location.search).get('dev_social') || null,
     freeSpecs: true,
+    // `?dev_text=l` — крупный текст оффера, `?dev_align=center` — по центру.
+    textSize: new URLSearchParams(window.location.search).get('dev_text') || 'm',
+    textAlign: new URLSearchParams(window.location.search).get('dev_align') || 'left',
     gallery: [
         'https://s3.lootarena.ru/uploads/images/2026/06/1782469908456_c41nkc_full.webp',
         'https://s3.lootarena.ru/uploads/images/2026/07/1785434311054_3l7lcg_full.webp',
@@ -73,7 +76,7 @@ export const devOfflineAnswer = (action: string): unknown => {
                 offerType: 'custom',
                 offerTitle: '500 бонусов на первую игру',
                 // Абзацы и список — как вставляет клуб из заметок (23.11.2026 «Сектор»: раньше шло сплошником).
-                offerDescription: 'Оставьте номер — бонусы придут в приложение Loot Arena.\nИх можно потратить на игру в клубе.\n\nЧто внутри:\n— 500 бонусов на игру\n— скидка на бар\n— приоритет при брони',
+                offerDescription: 'Оставьте номер — бонусы придут в приложение Loot Arena.\nИх можно потратить на игру в клубе.\n\n**Что внутри:**\n— 500 бонусов на игру\n— скидка на бар\n— приоритет при брони',
                 offerTerms: 'Один подарок на номер. Бонусы сгорают через 14 дней.',
                 offerBadge: 'До конца недели',
                 brandColor: '#F2B118',

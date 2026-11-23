@@ -1,7 +1,7 @@
 import React from 'react';
 
 // Текст оффера так, как клуб его набрал: пустая строка — новый абзац, перенос — новая строка, строки
-// с «- », «— », «• », «* » или «1. » — список. 23.11.2026 «Сектор»: красиво отформатированный текст из заметок
+// с «- », «— », «• », «* » или «1. » — список, **так** — жирный. 23.11.2026 «Сектор»: красиво отформатированный текст из заметок
 // на странице шёл одним сплошным куском — HTML схлопывал переносы. Разметку не принимаем (только текст):
 // всё рисует React, ссылки и теги из текста не исполняются.
 
@@ -38,7 +38,14 @@ function parseRichText(text: string): Block[] {
     return blocks;
 }
 
-const RichText: React.FC<{ text: string; className?: string; style?: React.CSSProperties }> = ({ text, className, style }) => {
+/** **жирный** внутри строки; непарные звёздочки остаются как есть. */
+const inline = (line: string): React.ReactNode => {
+    const parts = line.split(/\*\*(.+?)\*\*/g);
+    if (parts.length === 1) return line;
+    return parts.map((p, i) => (i % 2 ? <strong key={i} style={{ fontWeight: 700, color: 'inherit' }}>{p}</strong> : p));
+};
+
+const RichText: React.FC<{ text: string; className?: string; style?: React.CSSProperties; center?: boolean }> = ({ text, className, style, center }) => {
     const blocks = parseRichText(text);
     if (!blocks.length) return null;
     return (
@@ -47,14 +54,14 @@ const RichText: React.FC<{ text: string; className?: string; style?: React.CSSPr
                 if (b.kind === 'p') {
                     return (
                         <p key={i} style={{ margin: 0 }}>
-                            {b.lines.map((l, j) => <React.Fragment key={j}>{j > 0 && <br />}{l}</React.Fragment>)}
+                            {b.lines.map((l, j) => <React.Fragment key={j}>{j > 0 && <br />}{inline(l)}</React.Fragment>)}
                         </p>
                     );
                 }
                 const List = b.kind;
                 return (
-                    <List key={i} style={{ margin: 0, paddingLeft: '1.25em', listStyle: b.kind === 'ul' ? 'disc' : 'decimal', display: 'flex', flexDirection: 'column', gap: '0.25em' }}>
-                        {b.items.map((it, j) => <li key={j}>{it}</li>)}
+                    <List key={i} style={{ margin: 0, paddingLeft: center ? 0 : '1.25em', listStyle: b.kind === 'ul' ? 'disc' : 'decimal', listStylePosition: center ? 'inside' : 'outside', display: 'flex', flexDirection: 'column', gap: '0.25em' }}>
+                        {b.items.map((it, j) => <li key={j}>{inline(it)}</li>)}
                     </List>
                 );
             })}

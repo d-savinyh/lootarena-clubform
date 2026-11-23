@@ -520,6 +520,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ slug, link }) => {
                             healthWarning={!!ageGate?.healthWarning}
                             warningFitKey={warningFitKey}
                             giftIcon={page.giftIcon}
+                            textSize={page.textSize}
+                            textAlign={page.textAlign}
                         />
                     }
                     clubPicker={clubPicker}

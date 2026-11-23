@@ -7,6 +7,8 @@ export type PageTheme = 'night' | 'photo' | 'light';
 export type PageBlockType = 'free' | 'prices' | 'gallery' | 'video' | 'map' | 'social' | 'clubs';
 /** Значок подарка над заголовком оффера: крупный (как было) / маленький на плашке-бейдже / без значка. */
 export type GiftIconMode = 'big' | 'badge' | 'none';
+export type OfferTextSize = 'm' | 'l';
+export type OfferTextAlign = 'left' | 'center';
 
 /** Железо зоны — та же сводка, что «Характеристики зон» ТВ-карты (widget_zone_specs). */
 export interface PageZoneSpecs { cpu?: string; gpu?: string; ram?: string; monitor?: string; note?: string }
@@ -38,6 +40,9 @@ export interface LandingPageDesign {
     socialColor: string | null;
     /** Показывать железо зон в «Свободно сейчас». */
     freeSpecs: boolean;
+    /** Текст оффера: размер и выравнивание (23.11.2026). */
+    textSize: OfferTextSize;
+    textAlign: OfferTextAlign;
 }
 
 const THEMES: PageTheme[] = ['night', 'photo', 'light'];
@@ -110,6 +115,8 @@ export function normalizePage(raw: unknown): LandingPageDesign | null {
         giftIcon: GIFT_ICONS.includes(p.giftIcon) ? p.giftIcon : 'big',
         socialColor: p.socialColor === 'accent' || (typeof p.socialColor === 'string' && HEX_RE.test(p.socialColor)) ? p.socialColor : null,
         freeSpecs: p.freeSpecs === true,
+        textSize: p.textSize === 'l' ? 'l' : 'm',
+        textAlign: p.textAlign === 'center' ? 'center' : 'left',
     };
 }
 
