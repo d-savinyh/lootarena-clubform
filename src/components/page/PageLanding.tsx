@@ -2,7 +2,7 @@ import React from 'react';
 import type { ClubLanding } from '../../utils/api';
 import { clubSocialLinks } from '../../utils/socialLinks';
 import type { LandingPageDesign, PageBlockType } from '../../utils/page';
-import { FreeNowBlock, GalleryBlock, MapBlock, PricesBlock, SocialBlock, VideoBlock } from './PageBlocks';
+import { ClubsBlock, FreeNowBlock, GalleryBlock, MapBlock, PricesBlock, SocialBlock, VideoBlock } from './PageBlocks';
 
 // Лид-формы 2.0: страница клуба по теме и блокам из настроек формы (offer_config.page).
 // Логика заявки, возраста, сетевой формы и экрана успеха остаётся в LandingPage — сюда приходят готовые
@@ -49,17 +49,21 @@ const PageLanding: React.FC<Props> = ({ page, club, accent, coverUrl, isDesktop,
     const address = hideClubDetails ? null : club.address;
     const social = hideClubDetails ? [] : clubSocialLinks(club.socialLinks);
     const cover = coverUrl || page.gallery[0] || null;
+    // Цвет кнопок соцсетей: null — нейтральные; 'accent' — цвет кнопки страницы; '#RRGGBB' — свой из палитры мастера.
+    const socialBg = page.socialColor === 'accent' ? accent : page.socialColor;
+    const socialTone = socialBg ? { bg: socialBg, fg: onAccent(socialBg) } : null;
 
     const block = (type: PageBlockType): React.ReactNode => {
         switch (type) {
-            case 'free': return page.free ? <FreeNowBlock key={type} free={page.free} compact={theme === 'photo' || isDesktop} /> : null;
+            case 'free': return page.free ? <FreeNowBlock key={type} free={page.free} compact={theme === 'photo' || isDesktop} showSpecs={page.freeSpecs} /> : null;
             case 'prices': return page.prices ? <PricesBlock key={type} prices={page.prices} currency={club.currency} onEvent={onEvent} /> : null;
             case 'gallery': return page.gallery.length ? <GalleryBlock key={type} images={page.gallery} theme={theme} desktop={isDesktop} onEvent={onEvent} /> : null;
             case 'video': return page.video ? <VideoBlock key={type} video={page.video} fallbackPoster={page.gallery[0] || cover || undefined} onEvent={onEvent} /> : null;
             case 'map': return page.map && !hideClubDetails
                 ? <MapBlock key={type} map={page.map} theme={theme} address={address} hours={hours} clubName={club.name} logoUrl={club.avatarUrl} onEvent={onEvent} />
                 : null;
-            case 'social': return social.length ? <SocialBlock key={type} links={social} onEvent={onEvent} /> : null;
+            case 'social': return social.length ? <SocialBlock key={type} links={social} tone={socialTone} onEvent={onEvent} /> : null;
+            case 'clubs': return page.clubs && !hideClubDetails ? <ClubsBlock key={type} clubs={page.clubs} onEvent={onEvent} /> : null;
             default: return null;
         }
     };

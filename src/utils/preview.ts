@@ -60,6 +60,8 @@ export function previewLanding(): ClubLanding | null {
         }
         // Карту примером не показываем: чужой адрес на карте вводил бы в заблуждение.
         page.map = !network ? livePage?.map || null : null;
+        // «Наши клубы» — только настоящие клубы владельца из живой формы (если там блок включён), без примера.
+        page.clubs = page.blocks.includes('clubs') && !network ? livePage?.clubs || null : null;
     }
     const liveClub = live?.club;
     return {

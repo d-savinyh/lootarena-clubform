@@ -4,9 +4,17 @@
 // рисуется прежним видом.
 
 export type PageTheme = 'night' | 'photo' | 'light';
-export type PageBlockType = 'free' | 'prices' | 'gallery' | 'video' | 'map' | 'social';
+export type PageBlockType = 'free' | 'prices' | 'gallery' | 'video' | 'map' | 'social' | 'clubs';
+/** Значок подарка над заголовком оффера: крупный (как было) / маленький на плашке-бейдже / без значка. */
+export type GiftIconMode = 'big' | 'badge' | 'none';
+export type OfferTextSize = 'm' | 'l';
+export type OfferTextAlign = 'left' | 'center';
 
-export interface PageFreeZone { name: string; total: number; available: number }
+/** Железо зоны — та же сводка, что «Характеристики зон» ТВ-карты (widget_zone_specs). */
+export interface PageZoneSpecs { cpu?: string; gpu?: string; ram?: string; monitor?: string; note?: string }
+export interface PageFreeZone { name: string; total: number; available: number; specs?: PageZoneSpecs | null }
+/** Клуб того же владельца для блока «Наши клубы». */
+export interface PageClub { name: string; city: string | null; address: string | null; lat: number | null; lng: number | null; current: boolean }
 export interface PagePrice {
     zone: string;
     title: string;
@@ -26,10 +34,22 @@ export interface LandingPageDesign {
     free: { updatedAt: string | null; zones: PageFreeZone[] } | null;
     prices: PagePrice[] | null;
     map: { lat: number; lng: number } | null;
+    clubs: PageClub[] | null;
+    giftIcon: GiftIconMode;
+    /** null — нейтральные кнопки соцсетей; 'accent' — цвет кнопки страницы; '#RRGGBB' — свой цвет. */
+    socialColor: string | null;
+    /** Показывать железо зон в «Свободно сейчас». */
+    freeSpecs: boolean;
+    /** Текст оффера: размер и выравнивание (23.11.2026). */
+    textSize: OfferTextSize;
+    textAlign: OfferTextAlign;
 }
 
 const THEMES: PageTheme[] = ['night', 'photo', 'light'];
-const BLOCKS: PageBlockType[] = ['free', 'prices', 'gallery', 'video', 'map', 'social'];
+const BLOCKS: PageBlockType[] = ['free', 'prices', 'gallery', 'video', 'map', 'social', 'clubs'];
+const GIFT_ICONS: GiftIconMode[] = ['big', 'badge', 'none'];
+const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
+const SPEC_KEYS = ['cpu', 'gpu', 'ram', 'monitor', 'note'] as const;
 const S3_RE = /^https:\/\/s3\.lootarena\.ru\/[A-Za-z0-9/_.%-]+$/;
 
 const num = (v: unknown): number | null => {
@@ -56,7 +76,7 @@ export function normalizePage(raw: unknown): LandingPageDesign | null {
         : null;
     const freeZones: PageFreeZone[] = (Array.isArray(p.free?.zones) ? p.free.zones : [])
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- элементы недоверенного массива
-        .map((z: any) => ({ name: str(z?.name, 60), total: num(z?.total) ?? 0, available: num(z?.available) ?? 0 }))
+        .map((z: any) => ({ name: str(z?.name, 60), total: num(z?.total) ?? 0, available: num(z?.available) ?? 0, specs: readSpecs(z?.specs) }))
         .filter((z: PageFreeZone) => z.name && z.total > 0);
     const prices: PagePrice[] = (Array.isArray(p.prices) ? p.prices : [])
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- элементы недоверенного массива
@@ -69,20 +89,53 @@ export function normalizePage(raw: unknown): LandingPageDesign | null {
             currency: str(x?.currency, 3) || null,
         }))
         .filter((x: PagePrice) => x.zone && x.price >= 0);
+    const clubs: PageClub[] = (Array.isArray(p.clubs) ? p.clubs : [])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- элементы недоверенного массива
+        .map((c: any) => {
+            const cLat = num(c?.lat), cLng = num(c?.lng);
+            const geo = cLat !== null && cLng !== null && Math.abs(cLat) <= 90 && Math.abs(cLng) <= 180;
+            return { name: str(c?.name, 60), city: str(c?.city, 40) || null, address: str(c?.address, 120) || null,
+                lat: geo ? cLat : null, lng: geo ? cLng : null, current: c?.current === true };
+        })
+        .filter((c: PageClub) => c.name)
+        .slice(0, 40);
     const lat = num(p.map?.lat), lng = num(p.map?.lng);
     const map = lat !== null && lng !== null && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { lat, lng } : null;
 
     return {
         theme: p.theme,
-        accent: typeof p.accent === 'string' && /^#[0-9A-Fa-f]{6}$/.test(p.accent) ? p.accent : null,
+        accent: typeof p.accent === 'string' && HEX_RE.test(p.accent) ? p.accent : null,
         blocks,
         gallery,
         video,
         free: freeZones.length ? { updatedAt: str(p.free?.updatedAt, 40) || null, zones: freeZones } : null,
         prices: prices.length ? prices : null,
         map,
+        clubs: clubs.length > 1 ? clubs : null,
+        giftIcon: GIFT_ICONS.includes(p.giftIcon) ? p.giftIcon : 'big',
+        socialColor: p.socialColor === 'accent' || (typeof p.socialColor === 'string' && HEX_RE.test(p.socialColor)) ? p.socialColor : null,
+        freeSpecs: p.freeSpecs === true,
+        textSize: p.textSize === 'l' ? 'l' : 'm',
+        textAlign: p.textAlign === 'center' ? 'center' : 'left',
     };
 }
+
+function readSpecs(raw: unknown): PageZoneSpecs | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const out: PageZoneSpecs = {};
+    for (const k of SPEC_KEYS) {
+        const v = str((raw as Record<string, unknown>)[k], 60).trim();
+        if (v) out[k] = v;
+    }
+    return Object.keys(out).length ? out : null;
+}
+
+/** «RTX 4070 Ti · i7-12700 · 32 ГБ · 300 Гц» — железо зоны одной строкой (видеокарта первой: её гость ищет). */
+export const specsLine = (s?: PageZoneSpecs | null): string | null => {
+    if (!s) return null;
+    const parts = [s.gpu, s.cpu, s.ram, s.monitor].filter(Boolean);
+    return parts.length ? parts.join(' · ') : null;
+};
 
 const CURRENCY_SYMBOL: Record<string, string> = { RUB: '₽', KZT: '₸', BYN: 'Br', UZS: 'сум', KGS: 'сом', USD: '$', EUR: '€' };
 export const currencySymbol = (code?: string | null) => CURRENCY_SYMBOL[(code || 'RUB').toUpperCase()] || (code || '₽');
